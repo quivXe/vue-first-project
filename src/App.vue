@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import TodoHeader from './components/todoHeader/todoHeader.vue';"./components/todoHeader/todoHeader.vue"
 import TodoItem from "./components/todoItem/todoItem.vue"
+import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
 
 const title = ref("changed title")
 let id = 0;
@@ -18,12 +19,20 @@ function onTaskPressed(task) {
 function onDeleteTask(task) {
   tasks.value = tasks.value.filter(t => t.id !== task.id);
 }
+
+function onNewTaskBlur(value) {
+  if (value === "") return;
+  tasks.value.push({
+    id: id++, name: value
+  })
+}
 </script>
 
 <template>
 <TodoHeader :title="title"></TodoHeader>
 <ul>
   <TodoItem v-for="task in tasks" :task="task" @task-pressed="onTaskPressed" @delete-task="onDeleteTask"></TodoItem>
+  <TodoAddItem @newTaskBlur="onNewTaskBlur"</TodoAddItem>
 </ul>
 </template>
 
