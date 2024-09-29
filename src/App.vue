@@ -1,38 +1,88 @@
 <script setup>
-import { ref } from 'vue'
-import TodoHeader from './components/todoHeader/todoHeader.vue';"./components/todoHeader/todoHeader.vue"
+import { ref, reactive, computed  } from 'vue'
+import TodoHeader from './components/todoHeader/todoHeader.vue'
 import TodoItem from "./components/todoItem/todoItem.vue"
 import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
 
 const title = ref("changed title")
-let id = 0;
-const tasks = ref([
-  {id: id++, "name": `do task n.${id}`},
-  {id: id++, "name": `do task n.${id}`},
-  {id: id++, "name": `do task n.${id}`},
+var id = 0;
+// const tasks = ref([
+//   {id: id++, "name": `do task n.${id}`},
+//   {id: id++, "name": `do task n.${id}`},
+//   {id: id++, "name": `do task n.${id}`},
+// ])
+const allTasks = ref([
+  {
+    id: id++,
+    "name": `do task n.${id}`,
+    subTasks: [
+      {id: id++, "name": `1do task n.${id}`},
+      {id: id++, "name": `1do task n.${id}`},
+      {id: id++, "name": `1do task n.${id}`},
+    ]
+  },
+  {
+    id: id++,
+    "name": `do task n.${id}`,
+    subTasks: [
+      {id: id++, "name": `2do task n.${id}`},
+      {id: id++, "name": `2do task n.${id}`},
+      {id: id++, "name": `2do task n.${id}`},
+    ]
+  },
+  {
+    id: id++,
+    "name": `do task n.${id}`,
+    subTasks: [
+      {id: id++, "name": `3do task n.${id}`},
+      {id: id++, "name": `3do task n.${id}`},
+      {id: id++, "name": `3do task n.${id}`},
+    ]
+  },
 ])
 
+const currentTasks = computed(() => {
+  return getCurrentTasks()
+})
+function getCurrentTasks(index = 0, subTasks = allTasks.value) {
+  if (parentTree.value[index] === undefined) return subTasks;
+  let currentTask = subTasks.find(task => task.id === parentTree.value[index]);
+
+  if (!currentTask || !currentTask.subTasks) return null; // Return null if something goes wrong (e.g., task not found)
+
+  return getCurrentTasks(index + 1, currentTask.subTasks);
+}
+
 function onTaskPressed(task) {
+  parentTree.value.push(task.id);
   title.value = task.name;
 }
 
 function onDeleteTask(task) {
-  tasks.value = tasks.value.filter(t => t.id !== task.id);
+  let _currentTasks = getCurrentTasks();
+  const index = _currentTasks.findIndex(t => t.id === task.id);
+  if (index !== -1) _currentTasks.splice(index, 1);
+  console.log(allTasks.value)
 }
-
 function onNewTaskBlur(value) {
   if (value === "") return;
-  tasks.value.push({
-    id: id++, name: value
-  })
+  addTask(value);
 }
+function addTask(value) {
+  getCurrentTasks().push({
+    id: id++,
+    name: value
+  });
+}
+
+const parentTree = ref([]);
 </script>
 
 <template>
-<TodoHeader :title="title"></TodoHeader>
+<TodoHeader :title="title"/>
 <ul>
-  <TodoItem v-for="task in tasks" :task="task" @task-pressed="onTaskPressed" @delete-task="onDeleteTask"></TodoItem>
-  <TodoAddItem @newTaskBlur="onNewTaskBlur"</TodoAddItem>
+  <TodoItem v-for="task in currentTasks" :task="task" @task-pressed="onTaskPressed" @delete-task="onDeleteTask"/>
+  <TodoAddItem @newTaskBlur="onNewTaskBlur"/>
 </ul>
 </template>
 

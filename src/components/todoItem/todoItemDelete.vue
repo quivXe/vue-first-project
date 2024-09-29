@@ -6,12 +6,27 @@ const props = defineProps({
     "task": Object,
 })
 </script>
+
 <template>
     <div @click="emit('deleteTask', task)">delete</div>
 </template>
+
 <style scoped>
-    div {
-        display: inline-block;
-        margin: 0 15px;
-    }
+div {
+    padding: .5em .75em;
+    background: #d6d6d6;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+div:hover {
+    background: #e6e6e6;
+}
+div:active {
+    background: #c6c6c6;
+}
+div {
+    display: inline-block;
+    margin-left: 10px;
+}
 </style>
