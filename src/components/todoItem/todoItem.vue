@@ -1,9 +1,10 @@
 <script setup>
 import DeleteItem from "./todoItemDelete.vue"
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
-    task: Object
+    task: Object,
+    mouseReleasedToggle: Boolean
 })
 const emit = defineEmits([
     "taskClicked",
@@ -37,6 +38,12 @@ function taskReleased(task) {
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
+console.log(props.mouseReleasedToggle);
+watch(() => props.mouseReleasedToggle, () => {
+    if (pressStart) {
+        taskReleased(props.task)
+    }
+})
 </script>
 
 <template>
@@ -48,7 +55,6 @@ function mouseOverContainer(task) {
     >
         <span
             @mousedown="taskPressed(task)"
-            @mouseup="taskReleased(task)"
         >
             {{ task.name }}
         </span>
@@ -61,7 +67,6 @@ function mouseOverContainer(task) {
         display: flex;
         align-items: center;
         user-select: none;
-        border: 1px solid red;
     }
     span {
         flex-grow: 1;

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed  } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import TodoHeader from './components/todoHeader/todoHeader.vue'
 import TodoItem from "./components/todoItem/todoItem.vue"
 import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
@@ -87,6 +87,8 @@ const allTasks = ref([
 
 
 const dragging = ref(false);
+const mouseReleasedToggle = ref(false);
+
 const currentTasks = computed(() => {
   return getCurrentTasks()
 })
@@ -120,10 +122,17 @@ function onNewTaskBlur(value) {
   addTask(value);
 }
 function addTask(value) {
-  getCurrentTasks().push({
+  let _currentTasks = getCurrentTasks();
+  let maxFlexIndex = _currentTasks.reduce((acc, curr) => {
+    if (curr.flexIndex > acc) return curr.flexIndex;
+    return acc;
+  }, -Infinity);
+
+  _currentTasks.push({
     id: id++,
     name: value,
-    subTasks: []
+    subTasks: [],
+    flexIndex: maxFlexIndex + 2
   });
 }
 function popParent() {
@@ -146,6 +155,10 @@ function onStopDraggingTask(task) {
   draggedTask = null;
 }
 
+
+onMounted(() => {
+  document.addEventListener('mouseup', () => { mouseReleasedToggle.value = !mouseReleasedToggle.value });
+})
 </script>
 
 <template>
@@ -159,6 +172,7 @@ function onStopDraggingTask(task) {
       v-for="task in currentTasks"
       :key="task.id"
       :task="task"
+      :mouse-released-toggle="mouseReleasedToggle"
       @task-clicked="onTaskClicked"
       @delete-task="onDeleteTask"
       @mouse-over-task="onMouseOverTask"
