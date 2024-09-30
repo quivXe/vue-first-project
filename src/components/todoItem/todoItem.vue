@@ -2,6 +2,8 @@
 import DeleteItem from "./todoItemDelete.vue"
 import { ref, watch } from 'vue'
 
+const CLICK_DRAG_DELAY_DELTA = 600;
+
 const props = defineProps({
     task: Object,
     mouseReleasedToggle: Boolean
@@ -15,32 +17,41 @@ const emit = defineEmits([
 ])
 const dragging = ref(false);
 
-var pressStart = null;
+var taskPressed = false;
 var timeoutId = null;
-function taskPressed(task) {
-    pressStart = Date.now();
+function onTaskPressed(task) {
+    taskPressed = true;
+
     timeoutId = setTimeout(() => {
         dragging.value = true;
         emit("startDragging", task)
-    }, 800)
+    }, CLICK_DRAG_DELAY_DELTA)
 }
 function taskReleased(task) {
-    console.log(task.name);
-    let pressDuration = Date.now() - pressStart;
-    if (pressDuration < 800) {
+    taskPressed = false;
+
+    // timeout hasnt fired yet - counts as click, not drag
+    if (!dragging.value) {
         clearTimeout(timeoutId);
         timeoutId = null;
         emit('taskClicked', task);
+    } 
+
+    // dragging started
+    else {
+        timeoutId = null;
+        emit('stopDragging', task);
     }
+    
     dragging.value = false;
-    emit("stopDragging", task);
 }
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
-console.log(props.mouseReleasedToggle);
+
 watch(() => props.mouseReleasedToggle, () => {
-    if (pressStart) {
+    console.log('taskPressed: ' + taskPressed)
+    if (taskPressed) {
         taskReleased(props.task)
     }
 })
@@ -54,7 +65,7 @@ watch(() => props.mouseReleasedToggle, () => {
     @mouseover="mouseOverContainer(task)"
     >
         <span
-            @mousedown="taskPressed(task)"
+            @mousedown="onTaskPressed(task)"
         >
             {{ task.name }}
         </span>

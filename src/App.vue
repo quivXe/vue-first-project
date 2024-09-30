@@ -141,7 +141,7 @@ function popParent() {
 
 function onMouseOverTask(mouseOverTask) {
   if (draggedTask === null) return;
-  if (draggedTask === mouseOverTask.id) return; 
+  if (draggedTask.id === mouseOverTask.id) return; 
   draggedTask.flexIndex = draggedTask.flexIndex > mouseOverTask.flexIndex ? 
     mouseOverTask.flexIndex - 1 :
     mouseOverTask.flexIndex + 1;
@@ -153,6 +153,13 @@ function onStartDraggingTask(task) {
 }
 function onStopDraggingTask(task) {
   draggedTask = null;
+
+  // update flex indexes
+  let _currentTasks = getCurrentTasks();
+  _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
+  for (let i=0; i<_currentTasks.length; i++) {
+    _currentTasks[i].flexIndex = (i+1) * 2;
+  }
 }
 
 
