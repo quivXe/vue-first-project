@@ -1,74 +1,92 @@
 <script setup>
-import { ref, reactive, computed  } from 'vue'
+import { ref, computed  } from 'vue'
 import TodoHeader from './components/todoHeader/todoHeader.vue'
 import TodoItem from "./components/todoItem/todoItem.vue"
 import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
 import TodoBackButton from "./components/todoBackButton.vue"
 
-var id = 0;
+let id = 1;
+
 const allTasks = ref([
   {
     id: id++,
-    "name": `do task n.${id}`,
+    name: `do task n.${id}`,
+    flexIndex: 2,
     subTasks: [
       {
         id: id++,
-        "name": `1do task n.${id}`,
+        name: `1do task n.${id}`,
+        flexIndex: 2,
         subTasks: []
       },
       {
-        id: id++, 
-        "name": `1do task n.${id}`,
+        id: id++,
+        name: `1do task n.${id}`,
+        flexIndex: 4,
         subTasks: []
       },
       {
-        id: id++, 
-        "name": `1do task n.${id}`,
-        subTasks: []
-      },
-    ]
-  },
-  {
-    id: id++,
-    "name": `do task n.${id}`,
-    subTasks: [
-      {
-        id: id++, 
-        "name": `2do task n.${id}`,
-        subTasks: []
-      },
-      {
-        id: id++, 
-        "name": `2do task n.${id}`,
-        subTasks: []
-      },
-      {
-        id: id++, 
-        "name": `2do task n.${id}`,
+        id: id++,
+        name: `1do task n.${id}`,
+        flexIndex: 6,
         subTasks: []
       },
     ]
   },
   {
     id: id++,
-    "name": `do task n.${id}`,
+    name: `do task n.${id}`,
+    flexIndex: 4,
     subTasks: [
       {
-        id: id++, 
-        "name": `3do task n.${id}`
+        id: id++,
+        name: `2do task n.${id}`,
+        flexIndex: 2,
+        subTasks: []
       },
       {
-        id: id++, 
-        "name": `3do task n.${id}`
+        id: id++,
+        name: `2do task n.${id}`,
+        flexIndex: 4,
+        subTasks: []
       },
       {
-        id: id++, 
-        "name": `3do task n.${id}`
+        id: id++,
+        name: `2do task n.${id}`,
+        flexIndex: 6,
+        subTasks: []
       },
     ]
   },
-])
+  {
+    id: id++,
+    name: `do task n.${id}`,
+    flexIndex: 6,
+    subTasks: [
+      {
+        id: id++,
+        name: `3do task n.${id}`,
+        flexIndex: 2,
+        subTasks: []
+      },
+      {
+        id: id++,
+        name: `3do task n.${id}`,
+        flexIndex: 4,
+        subTasks: []
+      },
+      {
+        id: id++,
+        name: `3do task n.${id}`,
+        flexIndex: 6,
+        subTasks: []
+      },
+    ]
+  }
+]);
 
+
+const dragging = ref(false);
 const currentTasks = computed(() => {
   return getCurrentTasks()
 })
@@ -77,6 +95,8 @@ const title = computed(() => {
     parentTree.value[parentTree.value.length - 1].name :
     "VUE TODO APP"
 })
+const parentTree = ref([]);
+
 function getCurrentTasks(index = 0, subTasks = allTasks.value) {
   if (parentTree.value[index] === undefined) return subTasks;
   let currentTask = subTasks.find(task => task.id === parentTree.value[index].id);
@@ -86,7 +106,7 @@ function getCurrentTasks(index = 0, subTasks = allTasks.value) {
   return getCurrentTasks(index + 1, currentTask.subTasks);
 }
 
-function onTaskPressed(task) {
+function onTaskClicked(task) {
   parentTree.value.push(task);
 }
 
@@ -109,18 +129,60 @@ function addTask(value) {
 function popParent() {
   parentTree.value.pop();
 }
-const parentTree = ref([]);
+
+function onMouseOverTask(mouseOverTask) {
+  if (draggedTask === null) return;
+  if (draggedTask === mouseOverTask.id) return; 
+  draggedTask.flexIndex = draggedTask.flexIndex > mouseOverTask.flexIndex ? 
+    mouseOverTask.flexIndex - 1 :
+    mouseOverTask.flexIndex + 1;
+}
+
+var draggedTask = null;
+function onStartDraggingTask(task) {
+  draggedTask = getCurrentTasks().find(t => t.id == task.id);
+}
+function onStopDraggingTask(task) {
+  draggedTask = null;
+}
+
 </script>
 
 <template>
-<TodoBackButton @backPressed="popParent"></TodoBackButton>
-<TodoHeader :title="title"/>
-<ul>
-  <TodoItem v-for="task in currentTasks" :task="task" @task-pressed="onTaskPressed" @delete-task="onDeleteTask"/>
-  <TodoAddItem @newTaskBlur="onNewTaskBlur"/>
-</ul>
+  <div class="header">
+    <TodoBackButton @backPressed="popParent"/>
+    <TodoHeader :title="title"/>
+  </div>
+
+  <div class="column">
+    <TodoItem
+      v-for="task in currentTasks"
+      :key="task.id"
+      :task="task"
+      @task-clicked="onTaskClicked"
+      @delete-task="onDeleteTask"
+      @mouse-over-task="onMouseOverTask"
+      @start-dragging="onStartDraggingTask"
+      @stop-dragging="onStopDraggingTask"
+    />
+    <TodoAddItem @new-task-blur="onNewTaskBlur"/>
+  </div>
+
 </template>
 
 <style scoped>
-
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    background-color: lightblue;
+    width: 20vw;
+  }
 </style>

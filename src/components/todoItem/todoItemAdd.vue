@@ -13,5 +13,11 @@ function onBlur() {
 }
 </script>
 <template>
-    <li><input type="text" placeholder="Create new task" v-model="inputValue" @blur="onBlur"></li>
+    <input type="text" placeholder="Create new task" v-model="inputValue" @blur="onBlur">
 </template>
+
+<style scoped>
+    input {
+        padding: 2px 5px;
+    }
+</style>
