@@ -4,93 +4,109 @@ import TodoHeader from './components/todoHeader/todoHeader.vue'
 import TodoItem from "./components/todoItem/todoItem.vue"
 import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
 import TodoBackButton from "./components/todoBackButton.vue"
+import TodoColumn from "./components/todoColumn.vue"
 
-let id = 1;
-
+let id = 12;
 const allTasks = ref([
   {
-    id: id++,
-    name: `do task n.${id}`,
+    id: 1,
+    name: "do task n.1",
     flexIndex: 2,
+    status: 0,
     subTasks: [
       {
-        id: id++,
-        name: `1do task n.${id}`,
+        id: 2,
+        name: "1do task n.2",
         flexIndex: 2,
+        status: 1,
         subTasks: []
       },
       {
-        id: id++,
-        name: `1do task n.${id}`,
+        id: 3,
+        name: "1do task n.3",
         flexIndex: 4,
+        status: 2,
         subTasks: []
       },
       {
-        id: id++,
-        name: `1do task n.${id}`,
+        id: 4,
+        name: "1do task n.4",
         flexIndex: 6,
+        status: 1,
         subTasks: []
       },
     ]
   },
   {
-    id: id++,
-    name: `do task n.${id}`,
+    id: 5,
+    name: "do task n.5",
     flexIndex: 4,
+    status: 0,
     subTasks: [
       {
-        id: id++,
-        name: `2do task n.${id}`,
+        id: 6,
+        name: "2do task n.6",
         flexIndex: 2,
+        status: 0,
         subTasks: []
       },
       {
-        id: id++,
-        name: `2do task n.${id}`,
+        id: 7,
+        name: "2do task n.7",
         flexIndex: 4,
+        status: 2,
         subTasks: []
       },
       {
-        id: id++,
-        name: `2do task n.${id}`,
+        id: 8,
+        name: "2do task n.8",
         flexIndex: 6,
+        status: 1,
         subTasks: []
       },
     ]
   },
   {
-    id: id++,
-    name: `do task n.${id}`,
+    id: 9,
+    name: "do task n.9",
     flexIndex: 6,
+    status: 2,
     subTasks: [
       {
-        id: id++,
-        name: `3do task n.${id}`,
+        id: 10,
+        name: "3do task n.10",
         flexIndex: 2,
+        status: 0,
         subTasks: []
       },
       {
-        id: id++,
-        name: `3do task n.${id}`,
+        id: 11,
+        name: "3do task n.11",
         flexIndex: 4,
+        status: 1,
         subTasks: []
       },
       {
-        id: id++,
-        name: `3do task n.${id}`,
+        id: 12,
+        name: "3do task n.12",
         flexIndex: 6,
+        status: 2,
         subTasks: []
       },
     ]
   }
 ]);
 
+const TASK_STATUSES = {
+  TODO: 0,
+  DOING: 1,
+  DONE: 2
+}
 
-const dragging = ref(false);
 const mouseReleasedToggle = ref(false);
 
 const currentTasks = computed(() => {
-  return getCurrentTasks()
+  return getCurrentTasks();
 })
 const title = computed(() => {
   return parentTree.value.length?
@@ -141,10 +157,14 @@ function popParent() {
 
 function onMouseOverTask(mouseOverTask) {
   if (draggedTask === null) return;
-  if (draggedTask.id === mouseOverTask.id) return; 
+  if (draggedTask.id === mouseOverTask.id) return;
   draggedTask.flexIndex = draggedTask.flexIndex > mouseOverTask.flexIndex ? 
     mouseOverTask.flexIndex - 1 :
     mouseOverTask.flexIndex + 1;
+}
+function onMouseOverColumn(columnStatusNumber) {
+  if (draggedTask === null) return;
+  draggedTask.status = columnStatusNumber;
 }
 
 var draggedTask = null;
@@ -157,7 +177,7 @@ function onStopDraggingTask(task) {
   // update flex indexes
   let _currentTasks = getCurrentTasks();
   _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
-  for (let i=0; i<_currentTasks.length; i++) {
+  for (let i = 0; i < _currentTasks.length; i++) {
     _currentTasks[i].flexIndex = (i+1) * 2;
   }
 }
@@ -173,20 +193,28 @@ onMounted(() => {
     <TodoBackButton @backPressed="popParent"/>
     <TodoHeader :title="title"/>
   </div>
+  <div class="columns">
 
-  <div class="column">
-    <TodoItem
-      v-for="task in currentTasks"
-      :key="task.id"
-      :task="task"
-      :mouse-released-toggle="mouseReleasedToggle"
-      @task-clicked="onTaskClicked"
-      @delete-task="onDeleteTask"
-      @mouse-over-task="onMouseOverTask"
-      @start-dragging="onStartDraggingTask"
-      @stop-dragging="onStopDraggingTask"
-    />
-    <TodoAddItem @new-task-blur="onNewTaskBlur"/>
+    <TodoColumn
+      v-for="(taskStatusNumber, taskStatusName) in TASK_STATUSES"
+      :column-status-number="taskStatusNumber"
+      @mouse-over-column="onMouseOverColumn"
+    >
+      <h3>{{ taskStatusName }}</h3>
+      <TodoItem
+        v-for="task in currentTasks.filter(t => t.status == taskStatusNumber)"
+        :key="task.id"
+        :task="task"
+        :mouse-released-toggle="mouseReleasedToggle"
+        :_dragging="task.id === draggedTask?.id"
+        @task-clicked="onTaskClicked"
+        @delete-task="onDeleteTask"
+        @mouse-over-task="onMouseOverTask"
+        @start-dragging="onStartDraggingTask"
+        @stop-dragging="onStopDraggingTask"
+      />
+      <TodoAddItem @new-task-blur="onNewTaskBlur"/>
+    </TodoColumn>
   </div>
 
 </template>
@@ -198,12 +226,7 @@ onMounted(() => {
     justify-content: center;
     gap: 20px;
   }
-  .column {
+  .columns {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px;
-    background-color: lightblue;
-    width: 20vw;
   }
 </style>

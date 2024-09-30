@@ -6,7 +6,8 @@ const CLICK_DRAG_DELAY_DELTA = 600;
 
 const props = defineProps({
     task: Object,
-    mouseReleasedToggle: Boolean
+    mouseReleasedToggle: Boolean,
+    _dragging: Boolean
 })
 const emit = defineEmits([
     "taskClicked",
@@ -15,7 +16,7 @@ const emit = defineEmits([
     "startDragging",
     "stopDragging"
 ])
-const dragging = ref(false);
+const dragging = ref(props._dragging);
 
 var taskPressed = false;
 var timeoutId = null;
@@ -42,16 +43,17 @@ function taskReleased(task) {
         timeoutId = null;
         emit('stopDragging', task);
     }
-    
+    console.log("task released " + dragging.value);
     dragging.value = false;
+    console.log("task released2 " + dragging.value);
 }
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
 
 watch(() => props.mouseReleasedToggle, () => {
-    console.log('taskPressed: ' + taskPressed)
-    if (taskPressed) {
+    // checking for dragging cuz when changing column, task rerenders itself and taskPressed is false, but dragging is passed by parent
+    if (dragging.value || taskPressed) {
         taskReleased(props.task)
     }
 })
