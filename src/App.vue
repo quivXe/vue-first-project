@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import TodoHeader from './components/todoHeader/todoHeader.vue'
+import TodoParentTree from './components/nav/todoParentTree.vue'
 import TodoItem from "./components/todoItem/todoItem.vue"
 import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
-import TodoBackButton from "./components/todoBackButton.vue"
+import TodoBackButton from "./components/nav/todoBackButton.vue"
 import TodoColumn from "./components/todoColumn.vue"
 
 let id = 12;
@@ -106,12 +106,15 @@ const TASK_STATUSES = {
 const mouseReleasedToggle = ref(false);
 
 const currentTasks = computed(() => {
-  return getCurrentTasks();
+  let _currentTasks = getCurrentTasks();
+  return {
+    [TASK_STATUSES.TODO]: _currentTasks.filter(t => t.status === TASK_STATUSES.TODO),
+    [TASK_STATUSES.DOING]: _currentTasks.filter(t => t.status === TASK_STATUSES.DOING),
+    [TASK_STATUSES.DONE]: _currentTasks.filter(t => t.status === TASK_STATUSES.DONE),
+  }
 })
-const title = computed(() => {
-  return parentTree.value.length?
-    parentTree.value[parentTree.value.length - 1].name :
-    "VUE TODO APP"
+const parentNameTree = computed(() => {
+  return parentTree.value.map(parent => parent.name)
 })
 const parentTree = ref([]);
 
@@ -133,23 +136,22 @@ function onDeleteTask(task) {
   const index = _currentTasks.findIndex(t => t.id === task.id);
   if (index !== -1) _currentTasks.splice(index, 1);
 }
-function onNewTaskBlur(value) {
-  if (value === "") return;
-  addTask(value);
-}
 function addTask(value) {
+  console.log("add task")
   let _currentTasks = getCurrentTasks();
   let maxFlexIndex = _currentTasks.reduce((acc, curr) => {
     if (curr.flexIndex > acc) return curr.flexIndex;
     return acc;
   }, -Infinity);
 
+  console.log(getCurrentTasks())
   _currentTasks.push({
     id: id++,
     name: value,
     subTasks: [],
     flexIndex: maxFlexIndex + 2
   });
+  console.log(getCurrentTasks())
 }
 function popParent() {
   parentTree.value.pop();
@@ -190,43 +192,81 @@ onMounted(() => {
 
 <template>
   <div class="header">
+    TODO APP
+  </div>
+  <div class="nav">
     <TodoBackButton @backPressed="popParent"/>
-    <TodoHeader :title="title"/>
+    <TodoParentTree :parents="parentNameTree"/>
   </div>
-  <div class="columns">
-
-    <TodoColumn
-      v-for="(taskStatusNumber, taskStatusName) in TASK_STATUSES"
-      :column-status-number="taskStatusNumber"
-      @mouse-over-column="onMouseOverColumn"
-    >
-      <h3>{{ taskStatusName }}</h3>
-      <TodoItem
-        v-for="task in currentTasks.filter(t => t.status == taskStatusNumber)"
-        :key="task.id"
-        :task="task"
-        :mouse-released-toggle="mouseReleasedToggle"
-        :_dragging="task.id === draggedTask?.id"
-        @task-clicked="onTaskClicked"
-        @delete-task="onDeleteTask"
-        @mouse-over-task="onMouseOverTask"
-        @start-dragging="onStartDraggingTask"
-        @stop-dragging="onStopDraggingTask"
-      />
-      <TodoAddItem @new-task-blur="onNewTaskBlur"/>
-    </TodoColumn>
+  <div class="main">
+    <div class="columns">
+      <TodoColumn
+        v-for="(taskStatusNumber, taskStatusName) in TASK_STATUSES"
+        :key="taskStatusNumber"
+        :column-status-number="taskStatusNumber"
+        :task-status-name="taskStatusName"
+        @mouse-over-column="onMouseOverColumn"
+      >
+        <TodoItem
+          v-for="task in currentTasks[taskStatusNumber]"
+          :key="task.id"
+          :task="task"
+          :mouse-released-toggle="mouseReleasedToggle"
+          :_dragging="task.id === draggedTask?.id"
+          @task-clicked="onTaskClicked"
+          @delete-task="onDeleteTask"
+          @mouse-over-task="onMouseOverTask"
+          @start-dragging="onStartDraggingTask"
+          @stop-dragging="onStopDraggingTask"
+        />
+        <TodoAddItem @new-task-blur="addTask"/>
+      </TodoColumn>
+    </div>
   </div>
+  <div class="footer">
 
+  </div>
 </template>
 
-<style scoped>
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-  }
-  .columns {
-    display: flex;
-  }
+<style lang="sass" scoped>
+  @use "@/assets/common"
+
+  *
+    box-sizing: border-box
+
+  .header
+    display: flex
+    justify-content: center
+    align-items: center
+    font-size: 2em
+
+    height: common.$header-height
+    background-color: common.$bg-color
+    color: common.$header-text-color
+
+    border-bottom: common.$border
+
+  .nav
+    display: flex
+
+    height: common.$nav-height
+    background-color: common.$bg-color
+    color: common.$nav-text-color
+
+  .main
+    display: flex
+
+    height: common.$main-height
+    background-color: common.$bg-color
+
+    .columns
+      display: flex
+
+      width: 100%
+      
+
+  .footer
+    display: none
+
+
 </style>

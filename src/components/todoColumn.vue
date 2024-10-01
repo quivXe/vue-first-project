@@ -1,6 +1,7 @@
 <script setup>
 const props = defineProps({
-    "columnStatusNumber": Number
+    "columnStatusNumber": Number,
+    "taskStatusName": String
 })
 const emit = defineEmits([
     "mouseOverColumn"
@@ -10,16 +11,22 @@ const emit = defineEmits([
     <div class="column-container"
         @mouseover="emit('mouseOverColumn', columnStatusNumber)"
     >
+    
+        <h3>{{ taskStatusName }}</h3>
         <slot></slot>
+
     </div>
 </template>
-<style scoped>
-    .column-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
-        background-color: lightblue;
-        width: 20vw;
-    }
+<style lang="sass" scoped>
+    @use "@/assets/common"
+
+    .column-container 
+        display: flex
+        flex-direction: column
+        gap: 20px
+        padding: 20px
+        background-color: lightblue
+
+        width: calc(100% / 3)
+    
 </style>
