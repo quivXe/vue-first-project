@@ -212,6 +212,10 @@ class UIManager {
     this._mouseReleasedToggle.value = v;
   }
 
+  get TASK_STATUSES() {
+    return taskManager.TASK_STATUSES;
+  }
+
   taskClicked(task) {
     taskManager.pushParent(task);
   }
@@ -279,7 +283,7 @@ onMounted(() => {
   <div class="main">
     <div class="columns">
       <TodoColumn
-        v-for="(taskStatusNumber, taskStatusName) in taskManager.TASK_STATUSES"
+        v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
         :key="taskStatusNumber"
         :column-status-number="taskStatusNumber"
         :task-status-name="taskStatusName"
