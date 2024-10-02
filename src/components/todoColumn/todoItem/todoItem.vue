@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, nextTick } from 'vue'
 
 const CLICK_DRAG_DELAY_DELTA = 200;
 
@@ -10,6 +10,10 @@ const props = defineProps({
     createNew: {
         type: Boolean,
         default: false
+    },
+    changeName: {
+        type: Boolean,
+        default: false
     }
 })
 const emit = defineEmits([
@@ -18,20 +22,34 @@ const emit = defineEmits([
     "mouseOverTask",
     "startDragging",
     "stopDragging",
-    "newTaskBlur"
+    "newTaskBlur",
+    "changeNameBlur",
+    "optionsClicked"
 ])
 const dragging = ref(props._dragging); // ensure that even if item is rerendered, it maintain same dragging value
-const newTaskValue = ref("New task");
-const newTaskRef = ref(null);
+const inputTaskValue = ref("");
+const inputTaskRef = ref(null);
 
 var taskPressed = false;
 var timeoutId = null;
 
 onMounted(() => {
     if (props.createNew) {
-        newTaskRef.value.focus();
-        newTaskRef.value.select();
+        inputTaskValue.value= "New task";
+        nextTick(() => {
+            inputTaskRef.value.focus();
+            inputTaskRef.value.select();
+        })
     }
+})
+watch(() => props.changeName, (changeName) => {
+    inputTaskValue.value = props.task.name
+    nextTick(() => {
+        if (changeName) {
+            inputTaskRef.value.focus();
+            inputTaskRef.value.select();
+        }
+    })
 })
 
 function onTaskPressed(task) {
@@ -62,11 +80,10 @@ function releaseTask(task) {
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
-function onNewTaskBlur() {
-    console.log("halo")
-    if (newTaskValue === "") return;
-    emit("newTaskBlur", newTaskValue.value);
-    newTaskValue.value = "New task";
+function onInputTaskBlur() {
+    if (inputTaskValue === "") return;
+    if (props.changeName) emit("changeNameBlur", props.task, inputTaskValue.value);
+    else if (props.createNew) emit("newTaskBlur", inputTaskValue.value);
 }
 
 watch(() => props.mouseReleasedToggle, () => {
@@ -87,7 +104,7 @@ watch(() => props.mouseReleasedToggle, () => {
     >
 
         <div
-            v-if="!createNew"
+            v-if="!createNew && !changeName"
             class="tile-content"
             @mousedown="onTaskPressed(task)"
         >
@@ -100,14 +117,17 @@ watch(() => props.mouseReleasedToggle, () => {
         >
             <input
                 type="text"
-                text="New task"
-                v-model="newTaskValue"
-                ref="newTaskRef"
-                @blur="onNewTaskBlur"
+                v-model="inputTaskValue"
+                ref="inputTaskRef"
+                @blur="onInputTaskBlur"
+                @keydown.enter="onInputTaskBlur"
             >
         </div>
 
-        <div class="options"></div>
+        <div
+            class="options"
+            @click="emit('optionsClicked', task)"
+        ></div>
         <!-- <DeleteItem :task="task" @delete-task="emit('deleteTask', task)"></DeleteItem> -->
     </div>
 </template>

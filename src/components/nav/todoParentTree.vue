@@ -3,6 +3,9 @@
 const props = defineProps({
     parents: Array
 })
+const emit = defineEmits([
+    "parentClicked"
+])
 
 
 
@@ -10,14 +13,17 @@ const props = defineProps({
 
 <template>
     <div class="container">
-        <div class="home">
+        <div 
+            @click="emit('parentClicked', null)"
+            class="home">
             home
         </div>
         <div
             v-for="parent in parents"
+            @click="emit('parentClicked', parent)"
             class="nav-element"
         >
-            {{ parent }}
+            {{ parent.name }}
         </div>
     </div>
 </template>

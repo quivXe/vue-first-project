@@ -5,6 +5,7 @@ import TodoItem from "./components/todoColumn/todoItem/todoItem.vue"
 import TodoBackButton from "./components/nav/todoBackButton.vue"
 import TodoColumn from "./components/todoColumn/todoColumn.vue"
 import TodoItemAdd from "./components/todoColumn/todoItem/todoItemAdd.vue"
+import Options from "./components/options.vue"
 
 
 class TaskManager {
@@ -111,9 +112,14 @@ class TaskManager {
       return this.getCurrentTasks();
     })
 
-    this.parentNameTree = computed(() => {
-      return this.parentTree.value.map(parent => parent.name);
-    })
+    // Binding all methods to ensure 'this' refers to the correct context
+    this.getCurrentTasks = this.getCurrentTasks.bind(this);
+    this.findTaskParent = this.findTaskParent.bind(this);
+    this.addTask = this.addTask.bind(this);
+    this.removeTask = this.removeTask.bind(this);
+    this.pushParent = this.pushParent.bind(this);
+    this.popParent = this.popParent.bind(this);
+    this.selectParentInTree = this.selectParentInTree.bind(this);
   }
 
   getCurrentTasks(index = 0, subTasks = this.allTasks.value) {
@@ -164,12 +170,25 @@ class TaskManager {
     if (index !== -1) parent.splice(index, 1);
   }
 
+  changeTaskName(task, newName, inCurrentTasks=true) {
+    // let parent;
+    // if (inCurrentTasks) parent = this.getCurrentTasks();
+    // else {
+    //   parent = this.findTaskParent(task);
+    //   if (parent === null) return; // coundnt find given task
+    // }
+
+    // let index = parent.findIndex(t => t.id === task.id);
+    // if (index !== -1) parent[index].name = newName;
+    task.name = newName;
+  }
+
   pushParent(task) {
     this.parentTree.value.push(task);
   }
 
   popParent() {
-    this.parentTree.value.pop();
+    return this.parentTree.value.pop();
   }
 
   selectParentInTree(task) {
@@ -184,6 +203,9 @@ class UIManager {
   constructor() {
     this._mouseReleasedToggle = ref(false);
     this._creatingNewTask = ref(false);
+    this._showOptions = ref(false);
+    this._changingTaskName = ref(null);
+    this.optionsMenuData = {}
     this.draggedTask = null;
 
     // Bind methods to the instance
@@ -197,14 +219,17 @@ class UIManager {
     this.mouseOverColumn = this.mouseOverColumn.bind(this);
     this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
     this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
+    this.taskOptionsClicked = this.taskOptionsClicked.bind(this);
+    this.changeTaskName = this.changeTaskName.bind(this);
+    this.parentClicked = this.parentClicked.bind(this);
   }
 
   get currentTasks() {
     return taskManager.currentTasks.value;
   }
 
-  get parentNameTree() {
-    return taskManager.parentNameTree.value;
+  get parentTree() {
+    return taskManager.parentTree.value;
   }
 
   get mouseReleasedToggle() {
@@ -221,6 +246,19 @@ class UIManager {
     this._creatingNewTask.value = v;
   }
 
+  get changingTaskName() {
+    return this._changingTaskName.value;
+  }
+  set changingTaskName(v) {
+    this._changingTaskName.value = v;
+  }
+
+  get showOptions() {
+    return this._showOptions.value
+  }
+  set showOptions(v) {
+    this._showOptions.value = v;
+  }
   get TASK_STATUSES() {
     return taskManager.TASK_STATUSES;
   }
@@ -231,6 +269,11 @@ class UIManager {
 
   deleteTaskClicked(task) {
     taskManager.removeTask(task);
+  }
+
+  changeTaskName(task, newName) {
+    taskManager.changeTaskName(task, newName);
+    this.changingTaskName = null;
   }
 
   addTaskClicked() {
@@ -258,6 +301,25 @@ class UIManager {
     if (this.draggedTask === null) return;
     this.draggedTask.status = columnStatusNumber;
   }
+
+  taskOptionsClicked(task) {
+    this.showOptions = true;
+    this.optionsMenuData = {
+      header: "OPTIONS",
+      options: [
+        { name: "Delete", callback: () => {
+          this.showOptions = false;
+          taskManager.removeTask(task);
+        }},
+        { name: "Change name", callback: () => {
+          this.changingTaskName = task;
+          this.showOptions = false;
+        }}
+      ]
+    };
+  }
+
+
   startDraggingTaskTriggered(task) {
     this.draggedTask = taskManager.getCurrentTasks().find(t => t.id == task.id);
   }
@@ -270,6 +332,15 @@ class UIManager {
     for (let i = 0; i < _currentTasks.length; i++) {
       _currentTasks[i].flexIndex = (i+1) * 2;
     }
+  }
+
+  parentClicked(parent) {
+    if (parent === null) {
+      do {
+        parent = taskManager.popParent();
+      } while (parent !== undefined);
+    }
+    else taskManager.selectParentInTree(parent);
   }
 }
 let id = 12; // temp
@@ -291,7 +362,8 @@ onMounted(() => {
       @backPressed="uiManager.backButtonClicked"
     />
     <TodoParentTree
-      :parents="uiManager.parentNameTree"
+      :parents="uiManager.parentTree"
+      @parent-clicked="uiManager.parentClicked"
     />
   </div>
   <div class="main">
@@ -312,11 +384,14 @@ onMounted(() => {
           :task="task"
           :mouse-released-toggle="uiManager.mouseReleasedToggle"
           :_dragging="task.id === uiManager.draggedTask?.id"
+          :change-name="uiManager.changingTaskName?.id === task.id"
           @task-clicked="uiManager.taskClicked"
           @delete-task="uiManager.deleteTaskClicked"
           @mouse-over-task="uiManager.mouseOverTask"
           @start-dragging="uiManager.startDraggingTaskTriggered"
           @stop-dragging="uiManager.stopDraggingTaskTriggered"
+          @options-clicked="uiManager.taskOptionsClicked"
+          @change-name-blur="uiManager.changeTaskName"
         />
         <TodoItem
           v-if="uiManager.creatingNewTask && taskStatusNumber === uiManager.TASK_STATUSES.TODO"
@@ -329,6 +404,18 @@ onMounted(() => {
   <div class="footer">
 
   </div>
+  <Options
+    v-if="uiManager.showOptions"
+    :header="uiManager.optionsMenuData.header"
+    :options="uiManager.optionsMenuData.options"
+    @option-clicked="uiManager.optionClicked"
+  />
+  <div
+    v-if="uiManager.showOptions"
+    @click="uiManager.showOptions = false"
+    id="overlay"
+
+  ></div>
 </template>
 
 <style lang="sass" scoped>
@@ -376,5 +463,16 @@ onMounted(() => {
   .footer
     display: none
 
-
+  #overlay
+    position: fixed
+    top: 0
+    left: 0
+    height: 100vh
+    width: 100%
+    z-index: 8888
+    background-color: common.$overlay-color
+    opacity: .7
+  
+  #overlay.enabled
+    display: block
 </style>
