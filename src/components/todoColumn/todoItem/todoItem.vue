@@ -1,26 +1,39 @@
 <script setup>
-import DeleteItem from "./todoItemDelete.vue"
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
 const CLICK_DRAG_DELAY_DELTA = 200;
 
 const props = defineProps({
-    task: Object | null,
+    task: Object,
     mouseReleasedToggle: Boolean,
-    _dragging: Boolean
+    _dragging: Boolean,
+    createNew: {
+        type: Boolean,
+        default: false
+    }
 })
 const emit = defineEmits([
     "taskClicked",
     "deleteTask",
     "mouseOverTask",
     "startDragging",
-    "stopDragging"
+    "stopDragging",
+    "newTaskBlur"
 ])
 const dragging = ref(props._dragging); // ensure that even if item is rerendered, it maintain same dragging value
-const newTaskValue = ref("");
+const newTaskValue = ref("New task");
+const newTaskRef = ref(null);
 
 var taskPressed = false;
 var timeoutId = null;
+
+onMounted(() => {
+    if (props.createNew) {
+        newTaskRef.value.focus();
+        newTaskRef.value.select();
+    }
+})
+
 function onTaskPressed(task) {
     taskPressed = true;
 
@@ -50,37 +63,50 @@ function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
 function onNewTaskBlur() {
+    console.log("halo")
     if (newTaskValue === "") return;
-    
+    emit("newTaskBlur", newTaskValue.value);
+    newTaskValue.value = "New task";
 }
+
 watch(() => props.mouseReleasedToggle, () => {
     // checking for dragging cuz when changing column, task rerenders itself and taskPressed is false, but dragging is passed by parent
     if (dragging.value || taskPressed) {
         releaseTask(props.task)
     }
 })
+
 </script>
 
 <template>
     <div
         class="container"
         :class="{ dragging: dragging }"
-        :style="{ order: task.flexIndex }"
-        @mouseover="task !== null ? mouseOverContainer(task) : null"
+        :style="{ order: !createNew ? task.flexIndex : 9999 }"
+        @mouseover="!createNew ? mouseOverContainer(task) : null"
     >
+
         <div
+            v-if="!createNew"
             class="tile-content"
-            v-if="task !== null"
             @mousedown="onTaskPressed(task)"
         >
             {{ task.name }}
         </div>
+
         <div
             v-else
-            @blur="onNewTaskBlur"
+            class="tile-content"
         >
-            <input type="text" text="New task" v-model="newTaskValue">
+            <input
+                type="text"
+                text="New task"
+                v-model="newTaskValue"
+                ref="newTaskRef"
+                @blur="onNewTaskBlur"
+            >
         </div>
+
         <div class="options"></div>
         <!-- <DeleteItem :task="task" @delete-task="emit('deleteTask', task)"></DeleteItem> -->
     </div>
@@ -120,6 +146,8 @@ watch(() => props.mouseReleasedToggle, () => {
                 border: common.$border
                 outline: none
                 color: common.$input-in-tile-color
+
+                box-sizing: border-box
         
         .options
             padding: 2px

@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import TodoParentTree from './components/nav/todoParentTree.vue'
-import TodoItem from "./components/todoItem/todoItem.vue"
-import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
+import TodoItem from "./components/todoColumn/todoItem/todoItem.vue"
 import TodoBackButton from "./components/nav/todoBackButton.vue"
-import TodoColumn from "./components/todoColumn.vue"
+import TodoColumn from "./components/todoColumn/todoColumn.vue"
+import TodoItemAdd from "./components/todoColumn/todoItem/todoItemAdd.vue"
 
 
 class TaskManager {
@@ -183,13 +183,15 @@ class TaskManager {
 class UIManager {
   constructor() {
     this._mouseReleasedToggle = ref(false);
+    this._creatingNewTask = ref(false);
     this.draggedTask = null;
 
     // Bind methods to the instance
     // Ensure that methods always refer to the class instance (even when passed as callbacks)
     this.taskClicked = this.taskClicked.bind(this);
     this.deleteTaskClicked = this.deleteTaskClicked.bind(this);
-    this.addTaskTriggered = this.addTaskTriggered.bind(this);
+    this.addTaskClicked = this.addTaskClicked.bind(this);
+    this.newTaskBlur = this.newTaskBlur.bind(this);
     this.backButtonClicked = this.backButtonClicked.bind(this);
     this.mouseOverTask = this.mouseOverTask.bind(this);
     this.mouseOverColumn = this.mouseOverColumn.bind(this);
@@ -212,6 +214,13 @@ class UIManager {
     this._mouseReleasedToggle.value = v;
   }
 
+  get creatingNewTask() {
+    return this._creatingNewTask.value;
+  }
+  set creatingNewTask(v) {
+    this._creatingNewTask.value = v;
+  }
+
   get TASK_STATUSES() {
     return taskManager.TASK_STATUSES;
   }
@@ -224,8 +233,13 @@ class UIManager {
     taskManager.removeTask(task);
   }
 
-  addTaskTriggered(value) {
+  addTaskClicked() {
+    this.creatingNewTask = true;
+  }
+
+  newTaskBlur(value) {
     taskManager.addTask(value);
+    this.creatingNewTask = false;
   }
 
   backButtonClicked() {
@@ -245,7 +259,6 @@ class UIManager {
     this.draggedTask.status = columnStatusNumber;
   }
   startDraggingTaskTriggered(task) {
-    console.log("lol")
     this.draggedTask = taskManager.getCurrentTasks().find(t => t.id == task.id);
   }
   stopDraggingTaskTriggered(task) {
@@ -290,6 +303,9 @@ onMounted(() => {
         :task-status-name="taskStatusName"
         @mouse-over-column="uiManager.mouseOverColumn"
       >
+        <TodoItemAdd
+          v-if="taskStatusNumber === uiManager.TASK_STATUSES.TODO"
+          @click="uiManager.addTaskClicked"/>
         <TodoItem
           v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
           :key="task.id"
@@ -302,7 +318,11 @@ onMounted(() => {
           @start-dragging="uiManager.startDraggingTaskTriggered"
           @stop-dragging="uiManager.stopDraggingTaskTriggered"
         />
-        <TodoAddItem @new-task-blur="uiManager.addTaskTriggered"/>
+        <TodoItem
+          v-if="uiManager.creatingNewTask && taskStatusNumber === uiManager.TASK_STATUSES.TODO"
+          :create-new="true"
+          @new-task-blur="uiManager.newTaskBlur"
+        />
       </TodoColumn>
     </div>
   </div>
