@@ -16,7 +16,7 @@ const emit = defineEmits([
     "startDragging",
     "stopDragging"
 ])
-const dragging = ref(props._dragging);
+const dragging = ref(props._dragging); // ensure that even if item is rerendered, it maintain same dragging value
 
 var taskPressed = false;
 var timeoutId = null;
@@ -28,7 +28,7 @@ function onTaskPressed(task) {
         emit("startDragging", task)
     }, CLICK_DRAG_DELAY_DELTA)
 }
-function taskReleased(task) {
+function releaseTask(task) {
     taskPressed = false;
 
     // timeout hasnt fired yet - counts as click, not drag
@@ -43,9 +43,7 @@ function taskReleased(task) {
         timeoutId = null;
         emit('stopDragging', task);
     }
-    console.log("task released " + dragging.value);
     dragging.value = false;
-    console.log("task released2 " + dragging.value);
 }
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
@@ -54,7 +52,7 @@ function mouseOverContainer(task) {
 watch(() => props.mouseReleasedToggle, () => {
     // checking for dragging cuz when changing column, task rerenders itself and taskPressed is false, but dragging is passed by parent
     if (dragging.value || taskPressed) {
-        taskReleased(props.task)
+        releaseTask(props.task)
     }
 })
 </script>

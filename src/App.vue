@@ -6,8 +6,16 @@ import TodoAddItem from "./components/todoItem/todoItemAdd.vue"
 import TodoBackButton from "./components/nav/todoBackButton.vue"
 import TodoColumn from "./components/todoColumn.vue"
 
-let id = 12;
-const allTasks = ref([
+
+class TaskManager {
+  constructor() {
+    this.TASK_STATUSES = {
+      TODO: 0,
+      DOING: 1,
+      DONE: 2
+    }
+
+    this.allTasks = ref([
   {
     id: 1,
     name: "do task n.1",
@@ -95,93 +103,149 @@ const allTasks = ref([
       },
     ]
   }
-]);
+    ])
 
-const TASK_STATUSES = {
-  TODO: 0,
-  DOING: 1,
-  DONE: 2
+    this.parentTree = ref([]);
+
+    this.currentTasks = computed(() => {
+      return this.getCurrentTasks();
+    })
+
+    this.parentNameTree = computed(() => {
+      return this.parentTree.value.map(parent => parent.name);
+    })
+  }
+
+  getCurrentTasks(index = 0, subTasks = this.allTasks.value) {
+    if (this.parentTree.value[index] === undefined) return subTasks;
+    let currentTask = subTasks.find(task => task.id === this.parentTree.value[index].id);
+
+    if (!currentTask || !currentTask.subTasks) return null; // Return null if something goes wrong (e.g., task not found)
+
+    return this.getCurrentTasks(index + 1, currentTask.subTasks);
+  }
+
+  findTaskParent(subTasks = this.allTasks.value, task) {
+    if (subTasks.find(t => t.id === task.id)) return subTasks;
+
+    for (let i=0; i<subTasks.length; i++) {
+      let parent = this.findTaskParent(subTasks[i].subTasks, task);
+      if (parent !== null) return parent;
+    }
+    return null;
+  }
+
+  addTask(value, parent=null) {
+    if ( parent === null ) parent = this.getCurrentTasks();
+
+    let maxFlexIndex = parent.reduce((acc, curr) => {
+      if (curr.flexIndex > acc) return curr.flexIndex;
+      return acc;
+    }, -Infinity);
+
+    parent.push({
+      id: id++,
+      name: value,
+      subTasks: [],
+      flexIndex: maxFlexIndex + 2,
+      status: 0 // TODO: MAKE STATUS BASED ON COLUMN
+    });
+  }
+
+  removeTask(task, inCurrentTasks=true) {
+    let parent;
+    if (inCurrentTasks) parent = this.getCurrentTasks();
+    else {
+      parent = this.findTaskParent(task);
+      if (parent === null) return; // couldnt find given task
+    }
+
+    let index = parent.findIndex(t => t.id === task.id);
+    if (index !== -1) parent.splice(index, 1);
+  }
+
+  pushParent(task) {
+    this.parentTree.value.push(task);
+  }
+
+  popParent() {
+    this.parentTree.value.pop();
+  }
+
+  selectParentInTree(task) {
+    while ( this.parentTree.value[this.parentTree.value.length-1].id !== task.id ) {
+      this.popParent();
+    }
+  }
+
 }
 
-const mouseReleasedToggle = ref(false);
+class UIManager {
+  constructor() {
+    this.mouseReleasedToggle = ref(false);
+    this.draggedTask = null;
 
-const currentTasks = computed(() => {
-  return getCurrentTasks()
-})
-const parentNameTree = computed(() => {
-  return parentTree.value.map(parent => parent.name)
-})
-const parentTree = ref([]);
+    // Bind methods to the instance
+    // Ensure that methods always refer to the class instance (even when passed as callbacks)
+    this.taskClicked = this.taskClicked.bind(this);
+    this.deleteTaskClicked = this.deleteTaskClicked.bind(this);
+    this.addTaskTriggered = this.addTaskTriggered.bind(this);
+    this.backButtonClicked = this.backButtonClicked.bind(this);
+    this.mouseOverTask = this.mouseOverTask.bind(this);
+    this.mouseOverColumn = this.mouseOverColumn.bind(this);
+    this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
+    this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
+  }
 
-function getCurrentTasks(index = 0, subTasks = allTasks.value) {
-  if (parentTree.value[index] === undefined) return subTasks;
-  let currentTask = subTasks.find(task => task.id === parentTree.value[index].id);
+  taskClicked(task) {
+    taskManager.pushParent(task);
+  }
 
-  if (!currentTask || !currentTask.subTasks) return null; // Return null if something goes wrong (e.g., task not found)
+  deleteTaskClicked(task) {
+    taskManager.removeTask(task);
+  }
 
-  return getCurrentTasks(index + 1, currentTask.subTasks);
-}
+  addTaskTriggered(value) {
+    taskManager.addTask(value);
+  }
 
-function onTaskClicked(task) {
-  parentTree.value.push(task);
-}
+  backButtonClicked() {
+    taskManager.popParent();
+  }
 
-function onDeleteTask(task) {
-  let _currentTasks = getCurrentTasks();
-  const index = _currentTasks.findIndex(t => t.id === task.id);
-  if (index !== -1) _currentTasks.splice(index, 1);
-}
-function addTask(value) {
-  console.log("add task")
-  let _currentTasks = getCurrentTasks();
-  let maxFlexIndex = _currentTasks.reduce((acc, curr) => {
-    if (curr.flexIndex > acc) return curr.flexIndex;
-    return acc;
-  }, -Infinity);
+  mouseOverTask(taskOver) {
+    if (this.draggedTask === null) return;
+    if (this.draggedTask.id === taskOver.id) return;
+    this.draggedTask.flexIndex = this.draggedTask.flexIndex > taskOver.flexIndex ? 
+      taskOver.flexIndex - 1 :
+      taskOver.flexIndex + 1;
+    }
+  
+  mouseOverColumn(columnStatusNumber) {
+    if (this.draggedTask === null) return;
+    this.draggedTask.status = columnStatusNumber;
+  }
+  startDraggingTaskTriggered(task) {
+    this.draggedTask = taskManager.getCurrentTasks().find(t => t.id == task.id);
+  }
+  stopDraggingTaskTriggered(task) {
+    this.draggedTask = null;
 
-  _currentTasks.push({
-    id: id++,
-    name: value,
-    subTasks: [],
-    flexIndex: maxFlexIndex + 2,
-    status: 0 // TODO: MAKE STATUS BASED ON COLUMN
-  });
-  console.log(getCurrentTasks())
-}
-function popParent() {
-  parentTree.value.pop();
-}
-
-function onMouseOverTask(mouseOverTask) {
-  if (draggedTask === null) return;
-  if (draggedTask.id === mouseOverTask.id) return;
-  draggedTask.flexIndex = draggedTask.flexIndex > mouseOverTask.flexIndex ? 
-    mouseOverTask.flexIndex - 1 :
-    mouseOverTask.flexIndex + 1;
-}
-function onMouseOverColumn(columnStatusNumber) {
-  if (draggedTask === null) return;
-  draggedTask.status = columnStatusNumber;
-}
-
-var draggedTask = null;
-function onStartDraggingTask(task) {
-  draggedTask = getCurrentTasks().find(t => t.id == task.id);
-}
-function onStopDraggingTask(task) {
-  draggedTask = null;
-
-  // update flex indexes
-  let _currentTasks = getCurrentTasks();
-  _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
-  for (let i = 0; i < _currentTasks.length; i++) {
-    _currentTasks[i].flexIndex = (i+1) * 2;
+    // update flex indexes
+    let _currentTasks = taskManager.getCurrentTasks();
+    _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
+    for (let i = 0; i < _currentTasks.length; i++) {
+      _currentTasks[i].flexIndex = (i+1) * 2;
+    }
   }
 }
+let id = 12; // temp
 
+const taskManager = new TaskManager();
+const uiManager = new UIManager();
 
 onMounted(() => {
-  document.addEventListener('mouseup', () => { mouseReleasedToggle.value = !mouseReleasedToggle.value });
+  document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle.value = !uiManager.mouseReleasedToggle.value });
 })
 </script>
 
@@ -190,31 +254,35 @@ onMounted(() => {
     TODO APP
   </div>
   <div class="nav">
-    <TodoBackButton @backPressed="popParent"/>
-    <TodoParentTree :parents="parentNameTree"/>
+    <TodoBackButton
+      @backPressed="uiManager.backButtonClicked"
+    />
+    <TodoParentTree
+      :parents="taskManager.parentNameTree.value"
+    />
   </div>
   <div class="main">
     <div class="columns">
       <TodoColumn
-        v-for="(taskStatusNumber, taskStatusName) in TASK_STATUSES"
+        v-for="(taskStatusNumber, taskStatusName) in taskManager.TASK_STATUSES"
         :key="taskStatusNumber"
         :column-status-number="taskStatusNumber"
         :task-status-name="taskStatusName"
-        @mouse-over-column="onMouseOverColumn"
+        @mouse-over-column="uiManager.mouseOverColumn"
       >
         <TodoItem
-          v-for="task in currentTasks.filter(t => t.status === taskStatusNumber)"
+          v-for="task in taskManager.currentTasks.value.filter(t => t.status === taskStatusNumber)"
           :key="task.id"
           :task="task"
-          :mouse-released-toggle="mouseReleasedToggle"
-          :_dragging="task.id === draggedTask?.id"
-          @task-clicked="onTaskClicked"
-          @delete-task="onDeleteTask"
-          @mouse-over-task="onMouseOverTask"
-          @start-dragging="onStartDraggingTask"
-          @stop-dragging="onStopDraggingTask"
+          :mouse-released-toggle="uiManager.mouseReleasedToggle.value"
+          :_dragging="task.id === uiManager.draggedTask?.id"
+          @task-clicked="uiManager.taskClicked"
+          @delete-task="uiManager.deleteTaskClicked"
+          @mouse-over-task="uiManager.mouseOverTask"
+          @start-dragging="uiManager.startDraggingTaskTriggered"
+          @stop-dragging="uiManager.stopDraggingTaskTriggered"
         />
-        <TodoAddItem @new-task-blur="addTask"/>
+        <TodoAddItem @new-task-blur="uiManager.addTaskTriggered"/>
       </TodoColumn>
     </div>
   </div>
