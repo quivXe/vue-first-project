@@ -182,7 +182,7 @@ class TaskManager {
 
 class UIManager {
   constructor() {
-    this.mouseReleasedToggle = ref(false);
+    this._mouseReleasedToggle = ref(false);
     this.draggedTask = null;
 
     // Bind methods to the instance
@@ -195,6 +195,21 @@ class UIManager {
     this.mouseOverColumn = this.mouseOverColumn.bind(this);
     this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
     this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
+  }
+
+  get currentTasks() {
+    return taskManager.currentTasks.value;
+  }
+
+  get parentNameTree() {
+    return taskManager.parentNameTree.value;
+  }
+
+  get mouseReleasedToggle() {
+    return this._mouseReleasedToggle.value;
+  }
+  set mouseReleasedToggle(v) {
+    this._mouseReleasedToggle.value = v;
   }
 
   taskClicked(task) {
@@ -245,7 +260,7 @@ const taskManager = new TaskManager();
 const uiManager = new UIManager();
 
 onMounted(() => {
-  document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle.value = !uiManager.mouseReleasedToggle.value });
+  document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle });
 })
 </script>
 
@@ -258,7 +273,7 @@ onMounted(() => {
       @backPressed="uiManager.backButtonClicked"
     />
     <TodoParentTree
-      :parents="taskManager.parentNameTree.value"
+      :parents="uiManager.parentNameTree"
     />
   </div>
   <div class="main">
@@ -271,10 +286,10 @@ onMounted(() => {
         @mouse-over-column="uiManager.mouseOverColumn"
       >
         <TodoItem
-          v-for="task in taskManager.currentTasks.value.filter(t => t.status === taskStatusNumber)"
+          v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
           :key="task.id"
           :task="task"
-          :mouse-released-toggle="uiManager.mouseReleasedToggle.value"
+          :mouse-released-toggle="uiManager.mouseReleasedToggle"
           :_dragging="task.id === uiManager.draggedTask?.id"
           @task-clicked="uiManager.taskClicked"
           @delete-task="uiManager.deleteTaskClicked"
