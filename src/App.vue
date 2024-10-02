@@ -106,12 +106,7 @@ const TASK_STATUSES = {
 const mouseReleasedToggle = ref(false);
 
 const currentTasks = computed(() => {
-  let _currentTasks = getCurrentTasks();
-  return {
-    [TASK_STATUSES.TODO]: _currentTasks.filter(t => t.status === TASK_STATUSES.TODO),
-    [TASK_STATUSES.DOING]: _currentTasks.filter(t => t.status === TASK_STATUSES.DOING),
-    [TASK_STATUSES.DONE]: _currentTasks.filter(t => t.status === TASK_STATUSES.DONE),
-  }
+  return getCurrentTasks()
 })
 const parentNameTree = computed(() => {
   return parentTree.value.map(parent => parent.name)
@@ -144,12 +139,12 @@ function addTask(value) {
     return acc;
   }, -Infinity);
 
-  console.log(getCurrentTasks())
   _currentTasks.push({
     id: id++,
     name: value,
     subTasks: [],
-    flexIndex: maxFlexIndex + 2
+    flexIndex: maxFlexIndex + 2,
+    status: 0 // TODO: MAKE STATUS BASED ON COLUMN
   });
   console.log(getCurrentTasks())
 }
@@ -208,7 +203,7 @@ onMounted(() => {
         @mouse-over-column="onMouseOverColumn"
       >
         <TodoItem
-          v-for="task in currentTasks[taskStatusNumber]"
+          v-for="task in currentTasks.filter(t => t.status === taskStatusNumber)"
           :key="task.id"
           :task="task"
           :mouse-released-toggle="mouseReleasedToggle"

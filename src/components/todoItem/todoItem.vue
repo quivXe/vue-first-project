@@ -2,7 +2,7 @@
 import DeleteItem from "./todoItemDelete.vue"
 import { ref, watch } from 'vue'
 
-const CLICK_DRAG_DELAY_DELTA = 600;
+const CLICK_DRAG_DELAY_DELTA = 500;
 
 const props = defineProps({
     task: Object,
