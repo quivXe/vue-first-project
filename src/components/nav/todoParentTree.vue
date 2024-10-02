@@ -32,8 +32,7 @@ const props = defineProps({
         padding: 20px 30px
 
         overflow-x: auto
-        scrollbar-color: common.$scrollbar-color
-        scrollbar-width: thin
+        @extend %scrollbar
     
         %nav-element-last 
             text-decoration: underline

@@ -4,3 +4,6 @@ body, #app {
     margin: 0;
     border: 0;
 }
+* {
+    font-family: 'Arial'
+}

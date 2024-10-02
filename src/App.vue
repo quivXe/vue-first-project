@@ -245,6 +245,7 @@ class UIManager {
     this.draggedTask.status = columnStatusNumber;
   }
   startDraggingTaskTriggered(task) {
+    console.log("lol")
     this.draggedTask = taskManager.getCurrentTasks().find(t => t.id == task.id);
   }
   stopDraggingTaskTriggered(task) {
@@ -334,16 +335,21 @@ onMounted(() => {
     height: common.$nav-height
     background-color: common.$bg-color
     color: common.$nav-text-color
+    border-bottom: common.$border
 
   .main
     display: flex
 
     height: common.$main-height
+    min-height: 300px
+
     background-color: common.$bg-color
+    color: common.$main-text-color
+
 
     .columns
       display: flex
-
+      justify-content: space-evenly
       width: 100%
       
 
