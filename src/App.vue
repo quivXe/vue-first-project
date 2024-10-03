@@ -408,13 +408,11 @@ onMounted(() => {
     v-if="uiManager.showOptions"
     :header="uiManager.optionsMenuData.header"
     :options="uiManager.optionsMenuData.options"
-    @option-clicked="uiManager.optionClicked"
   />
   <div
     v-if="uiManager.showOptions"
     @click="uiManager.showOptions = false"
     id="overlay"
-
   ></div>
 </template>
 

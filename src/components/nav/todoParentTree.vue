@@ -20,6 +20,7 @@ const emit = defineEmits([
         </div>
         <div
             v-for="parent in parents"
+            :key="parent.id"
             @click="emit('parentClicked', parent)"
             class="nav-element"
         >

@@ -1,5 +1,4 @@
 <script setup>
-import { ref } from 'vue'
 
 const props = defineProps({
     "columnStatusNumber": Number,
@@ -8,8 +7,6 @@ const props = defineProps({
 const emit = defineEmits([
     "mouseOverColumn"
 ])
-
-const showNewItemInput = ref(false);
 
 </script>
 <template>

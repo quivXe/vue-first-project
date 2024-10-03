@@ -1,18 +1,8 @@
 <script setup>
 
-import { ref } from 'vue'
-
 const emit = defineEmits([
     "click"
 ])
-const inputValue = ref("");
-
-function onBlur() {
-    if (inputValue.value === "") return;
-    emit('newTaskBlur', inputValue.value);
-    inputValue.value = "";
-}
-
 </script>
 <template>
     <div 
