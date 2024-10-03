@@ -6,8 +6,30 @@ import TodoBackButton from "./components/nav/todoBackButton.vue"
 import TodoColumn from "./components/todoColumn/todoColumn.vue"
 import TodoItemAdd from "./components/todoColumn/todoItem/todoItemAdd.vue"
 import Options from "./components/options.vue"
+import Description from './components/todoDescription/description.vue'
+import ShowDescriptionButton from './components/todoDescription/showDescriptionButton.vue'
 
-
+let id = 1; // temp
+function tempTaskGenerator(levels) {
+  function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  
+  }
+  let output = []
+  for (let i=0; i<levels.length; i++) {
+    output.push({
+      id: id++,
+      name: `task with id ${id-1}`,
+      flexIndex: (i+1) * 2,
+      status: getRandomInt(0, 2),
+      description: "",
+      subTasks: tempTaskGenerator(levels[i])
+    })
+  }
+  return output;
+}
 class TaskManager {
   constructor() {
     this.TASK_STATUSES = {
@@ -16,95 +38,7 @@ class TaskManager {
       DONE: 2
     }
 
-    this.allTasks = ref([
-  {
-    id: 1,
-    name: "do task n.1",
-    flexIndex: 2,
-    status: 0,
-    subTasks: [
-      {
-        id: 2,
-        name: "1do task n.2",
-        flexIndex: 2,
-        status: 1,
-        subTasks: []
-      },
-      {
-        id: 3,
-        name: "1do task n.3",
-        flexIndex: 4,
-        status: 2,
-        subTasks: []
-      },
-      {
-        id: 4,
-        name: "1do task n.4",
-        flexIndex: 6,
-        status: 1,
-        subTasks: []
-      },
-    ]
-  },
-  {
-    id: 5,
-    name: "do task n.5",
-    flexIndex: 4,
-    status: 0,
-    subTasks: [
-      {
-        id: 6,
-        name: "2do task n.6",
-        flexIndex: 2,
-        status: 0,
-        subTasks: []
-      },
-      {
-        id: 7,
-        name: "2do task n.7",
-        flexIndex: 4,
-        status: 2,
-        subTasks: []
-      },
-      {
-        id: 8,
-        name: "2do task n.8",
-        flexIndex: 6,
-        status: 1,
-        subTasks: []
-      },
-    ]
-  },
-  {
-    id: 9,
-    name: "do task n.9",
-    flexIndex: 6,
-    status: 2,
-    subTasks: [
-      {
-        id: 10,
-        name: "3do task n.10",
-        flexIndex: 2,
-        status: 0,
-        subTasks: []
-      },
-      {
-        id: 11,
-        name: "3do task n.11",
-        flexIndex: 4,
-        status: 1,
-        subTasks: []
-      },
-      {
-        id: 12,
-        name: "3do task n.12",
-        flexIndex: 6,
-        status: 2,
-        subTasks: []
-      },
-    ]
-  }
-    ])
+    this.allTasks = ref(tempTaskGenerator([[[[], [], []], []], [[[], []], []], [[]]]))
 
     this.parentTree = ref([]);
 
@@ -120,6 +54,7 @@ class TaskManager {
     this.pushParent = this.pushParent.bind(this);
     this.popParent = this.popParent.bind(this);
     this.selectParentInTree = this.selectParentInTree.bind(this);
+    this.updateDescription = this.updateDescription.bind(this);
   }
 
   getCurrentTasks(index = 0, subTasks = this.allTasks.value) {
@@ -170,17 +105,12 @@ class TaskManager {
     if (index !== -1) parent.splice(index, 1);
   }
 
-  changeTaskName(task, newName, inCurrentTasks=true) {
-    // let parent;
-    // if (inCurrentTasks) parent = this.getCurrentTasks();
-    // else {
-    //   parent = this.findTaskParent(task);
-    //   if (parent === null) return; // coundnt find given task
-    // }
-
-    // let index = parent.findIndex(t => t.id === task.id);
-    // if (index !== -1) parent[index].name = newName;
+  changeTaskName(task, newName) {
     task.name = newName;
+  }
+
+  updateDescription(task, newDescription) {
+    task.description = newDescription;
   }
 
   pushParent(task) {
@@ -205,6 +135,7 @@ class UIManager {
     this._creatingNewTask = ref(false);
     this._showOptions = ref(false);
     this._changingTaskName = ref(null);
+    this._showDescription = ref(false);
     this.optionsMenuData = {}
     this.draggedTask = null;
 
@@ -212,6 +143,8 @@ class UIManager {
     // Ensure that methods always refer to the class instance (even when passed as callbacks)
     this.taskClicked = this.taskClicked.bind(this);
     this.deleteTaskClicked = this.deleteTaskClicked.bind(this);
+    this.changeTaskName = this.changeTaskName.bind(this);
+    this.updateDescription = this.updateDescription.bind(this);
     this.addTaskClicked = this.addTaskClicked.bind(this);
     this.newTaskBlur = this.newTaskBlur.bind(this);
     this.backButtonClicked = this.backButtonClicked.bind(this);
@@ -220,8 +153,8 @@ class UIManager {
     this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
     this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
     this.taskOptionsClicked = this.taskOptionsClicked.bind(this);
-    this.changeTaskName = this.changeTaskName.bind(this);
     this.parentClicked = this.parentClicked.bind(this);
+    this.getCurrentParent = this.getCurrentParent.bind(this);
   }
 
   get currentTasks() {
@@ -259,6 +192,14 @@ class UIManager {
   set showOptions(v) {
     this._showOptions.value = v;
   }
+
+  get showDescription() {
+    return this._showDescription.value;
+  }
+  set showDescription(v) {
+    this._showDescription.value = v;
+  }
+
   get TASK_STATUSES() {
     return taskManager.TASK_STATUSES;
   }
@@ -276,6 +217,9 @@ class UIManager {
     this.changingTaskName = null;
   }
 
+  updateDescription(task, newDescription) {
+    taskManager.updateDescription(task, newDescription);
+  }
   addTaskClicked() {
     this.creatingNewTask = true;
   }
@@ -342,8 +286,11 @@ class UIManager {
     }
     else taskManager.selectParentInTree(parent);
   }
+
+  getCurrentParent() {
+    return this.parentTree[this.parentTree.length - 1];
+  }
 }
-let id = 12; // temp
 
 const taskManager = new TaskManager();
 const uiManager = new UIManager();
@@ -400,9 +347,21 @@ onMounted(() => {
         />
       </TodoColumn>
     </div>
+    <div class="description-container">
+      <ShowDescriptionButton
+        @show-description-toggle="uiManager.showDescription = !uiManager.showDescription"
+        :is-description-shown="uiManager.showDescription"
+        :disabled="uiManager.getCurrentParent() === undefined"
+      />
+      <Description
+        v-if="uiManager.showDescription"
+        :task="uiManager.getCurrentParent()"  
+        @save-description="uiManager.updateDescription"
+      />
+    </div>
   </div>
   <div class="footer">
-
+    Icons by <a href="https://icons8.com">Icons8</a>
   </div>
   <Options
     v-if="uiManager.showOptions"
@@ -412,7 +371,12 @@ onMounted(() => {
   <div
     v-if="uiManager.showOptions"
     @click="uiManager.showOptions = false"
-    id="overlay"
+    class="options-overlay"
+  ></div>
+  <div
+    v-if="uiManager.showDescription"
+    @click="uiManager.showDescription = false"
+    class="description-overlay"
   ></div>
 </template>
 
@@ -422,6 +386,14 @@ onMounted(() => {
   *
     box-sizing: border-box
 
+  %overlay
+    position: fixed
+    top: 0
+    left: 0
+    height: 100vh
+    width: 100%
+    z-index: 8888
+  
   .header
     display: flex
     justify-content: center
@@ -443,6 +415,8 @@ onMounted(() => {
     border-bottom: common.$border
 
   .main
+    position: relative
+
     display: flex
 
     height: common.$main-height
@@ -456,21 +430,30 @@ onMounted(() => {
       display: flex
       justify-content: space-evenly
       width: 100%
+
+    .description-container
+      display: flex
+      align-items: center
+      position: absolute
+      right: 0
+
+      z-index: 9999
+
+      height: 100%
       
 
   .footer
     display: none
 
-  #overlay
-    position: fixed
-    top: 0
-    left: 0
-    height: 100vh
-    width: 100%
-    z-index: 8888
+  .options-overlay
+    @extend %overlay
+
     background-color: common.$overlay-color
     opacity: .7
   
-  #overlay.enabled
-    display: block
+  .description-overlay
+    @extend %overlay
+
+    background-color: common.$overlay-color
+    opacity: .3
 </style>
