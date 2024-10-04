@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 class UIManager {
   constructor(taskManager) {
-    this.taskMaanger = taskManager;
+    this.taskManager = taskManager;
 
     this._mouseReleasedToggle = ref(false);
     this._creatingNewTask = ref(false);
@@ -32,11 +32,11 @@ class UIManager {
   }
 
   get currentTasks() {
-    return this.taskMaanger.currentTasks.value;
+    return this.taskManager.currentTasks.value;
   }
 
   get parentTree() {
-    return this.taskMaanger.parentTree.value;
+    return this.taskManager.parentTree.value;
   }
 
   get mouseReleasedToggle() {
@@ -75,36 +75,36 @@ class UIManager {
   }
 
   get TASK_STATUSES() {
-    return this.taskMaanger.TASK_STATUSES;
+    return this.taskManager.TASK_STATUSES;
   }
 
   taskClicked(task) {
-    this.taskMaanger.pushParent(task);
+    this.taskManager.pushParent(task);
   }
 
   deleteTaskClicked(task) {
-    this.taskMaanger.removeTask(task);
+    this.taskManager.removeTask(task);
   }
 
   changeTaskName(task, newName) {
-    this.taskMaanger.changeTaskName(task, newName);
+    this.taskManager.changeTaskName(task, newName);
     this.changingTaskName = null;
   }
 
   updateDescription(task, newDescription) {
-    this.taskMaanger.updateDescription(task, newDescription);
+    this.taskManager.updateDescription(task, newDescription);
   }
   addTaskClicked() {
     this.creatingNewTask = true;
   }
 
   newTaskBlur(value) {
-    this.taskMaanger.addTask(value);
+    this.taskManager.addTask(value);
     this.creatingNewTask = false;
   }
 
   backButtonClicked() {
-    this.taskMaanger.popParent();
+    this.taskManager.popParent();
   }
 
   mouseOverTask(taskOver) {
@@ -127,7 +127,7 @@ class UIManager {
       options: [
         { name: "Delete", callback: () => {
           this.showOptions = false;
-          this.taskMaanger.removeTask(task);
+          this.taskManager.removeTask(task);
         }},
         { name: "Change name", callback: () => {
           this.changingTaskName = task;
@@ -139,30 +139,30 @@ class UIManager {
 
 
   startDraggingTaskTriggered(task) {
-    this.draggedTask = this.taskMaanger.getCurrentTasks().find(t => t.id == task.id);
+    this.draggedTask = this.currentTasks.find(t => t.id == task.id);
   }
   stopDraggingTaskTriggered(task) {
     this.draggedTask = null;
 
     // update flex indexes
-    let _currentTasks = this.taskMaanger.getCurrentTasks();
+    let _currentTasks = this.currentTasks;
     _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
     for (let i = 0; i < _currentTasks.length; i++) {
       _currentTasks[i].flexIndex = (i+1) * 2;
     }
+
+    this.taskManager.updateStatus(task, task.status);
   }
 
   parentClicked(parent) {
     if (parent === null) {
-      do {
-        parent = this.taskMaanger.popParent();
-      } while (parent !== undefined);
+        parent = this.taskManager.selectParentInTree({id: -1}); // tasks with parentId: -1 are on main page 
     }
-    else this.taskMaanger.selectParentInTree(parent);
+    else this.taskManager.selectParentInTree(parent);
   }
 
   getCurrentParent() {
-    return this.parentTree[this.parentTree.length - 1];
+    return this.taskManager.getCurrentParent();
   }
 }
 

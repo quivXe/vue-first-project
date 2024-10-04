@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import TodoParentTree from './components/nav/todoParentTree.vue'
 import TodoItem from "./components/todoColumn/todoItem/todoItem.vue"
 import TodoBackButton from "./components/nav/todoBackButton.vue"
@@ -11,15 +11,38 @@ import ShowDescriptionButton from './components/todoDescription/showDescriptionB
 
 import TaskManager from './TaskManager.vue'
 import UIManager from './UIManager.vue'
+import IndexedDBManager from './IndexedDbManager'
 
-const taskManager = new TaskManager();
+const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
+(async () => {
+  // await indexedDBManager.init();
+  // console.log("start")
+  // let tasks = await indexedDBManager.getTasksByParentId(1)
+  // console.log("lol");
+  // console.log(tasks);
+})()
+// temp
+// let task = {
+//   "name": "lolek",
+//   "flexIndex": 2,
+//   "status": 1,
+//   "description": "",
+//   "subTasks": [ 15 ],
+//   "parentId": -1
+// }
+// console.log(task);
+// (async () => {console.log(await indexedDBManager.addObject(task))})()
+
+// temp
+const taskManager = new TaskManager(indexedDBManager);
+taskManager.init();
 const uiManager = new UIManager(taskManager);
+
 
 onMounted(() => {
   document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle });
 })
 </script>
-
 <template>
   <div class="header">
     TODO APP
@@ -71,7 +94,7 @@ onMounted(() => {
       <ShowDescriptionButton
         @show-description-toggle="uiManager.showDescription = !uiManager.showDescription"
         :is-description-shown="uiManager.showDescription"
-        :disabled="uiManager.getCurrentParent() === undefined"
+        :disabled="uiManager.getCurrentParent() === null"
       />
       <Description
         v-if="uiManager.showDescription"

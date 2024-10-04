@@ -1,8 +1,8 @@
 <script>
-import { ref, computed } from 'vue'
+import { ref, toRaw } from 'vue'
 
 let id = 1; // temp
-function tempTaskGenerator(levels, _id=id) {
+function tempTaskGenerator(levels, _id=null) {
   function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -24,24 +24,19 @@ function tempTaskGenerator(levels, _id=id) {
   return output;
 }
 class TaskManager {
-  constructor() {
+  constructor(indexedDBManager) {
     this.TASK_STATUSES = {
       TODO: 0,
       DOING: 1,
       DONE: 2
     }
 
-    this.allTasks = ref(tempTaskGenerator([[[[], [], []], []], [[[], []], []], [[]]]))
+    this.indexedDBManager = indexedDBManager;
 
     this.parentTree = ref([]);
-
-    this.currentTasks = computed(() => {
-      return this.getCurrentTasks();
-    })
+    this.currentTasks = ref([]);
 
     // Binding all methods to ensure 'this' refers to the correct context
-    this.getCurrentTasks = this.getCurrentTasks.bind(this);
-    this.findTaskParent = this.findTaskParent.bind(this);
     this.addTask = this.addTask.bind(this);
     this.removeTask = this.removeTask.bind(this);
     this.pushParent = this.pushParent.bind(this);
@@ -50,74 +45,98 @@ class TaskManager {
     this.updateDescription = this.updateDescription.bind(this);
   }
 
-  getCurrentTasks(index = 0, subTasks = this.allTasks.value) {
-    if (this.parentTree.value[index] === undefined) return subTasks;
-    let currentTask = subTasks.find(task => task.id === this.parentTree.value[index].id);
+  async init() {
+    let currentParent = this.getCurrentParent();
+    let parentId;
+    if (currentParent === null) parentId = -1;
+    else parentId = currentParent.id;
 
-    if (!currentTask || !currentTask.subTasks) return null; // Return null if something goes wrong (e.g., task not found)
-
-    return this.getCurrentTasks(index + 1, currentTask.subTasks);
+    this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
   }
-
-  findTaskParent(subTasks = this.allTasks.value, task) {
-    if (subTasks.find(t => t.id === task.id)) return subTasks;
-
-    for (let i=0; i<subTasks.length; i++) {
-      let parent = this.findTaskParent(subTasks[i].subTasks, task);
-      if (parent !== null) return parent;
-    }
-    return null;
+  async getTaskById(taskId) {
+    return this.indexedDBManager.getObjectById(taskId);
   }
-
-  addTask(value, parent=null) {
-    if ( parent === null ) parent = this.getCurrentTasks();
-
-    let maxFlexIndex = parent.reduce((acc, curr) => {
-      if (curr.flexIndex > acc) return curr.flexIndex;
-      return acc;
-    }, -Infinity);
-
-    parent.push({
-      id: id++,
-      name: value,
-      subTasks: [],
-      flexIndex: maxFlexIndex + 2,
-      status: 0 // TODO: MAKE STATUS BASED ON COLUMN
-    });
-  }
-
-  removeTask(task, inCurrentTasks=true) {
+  async addTask(value, parentId=null, inCurrentTasks=true) {
     let parent;
-    if (inCurrentTasks) parent = this.getCurrentTasks();
-    else {
-      parent = this.findTaskParent(task);
-      if (parent === null) return; // couldnt find given task
+    if (inCurrentTasks) parent = this.getCurrentParent();
+    else parent = await this.getTaskById(parentId);
+    parentId = parent === null ? -1 : parent.id;
+
+    // get maxFlexIndex
+    const siblings = await this.indexedDBManager.getTasksByParentId(parentId);
+    let maxFlexIndex;
+    if (siblings.length > 0) maxFlexIndex = siblings.reduce((acc, curr) => { return acc > curr ? acc : curr }, -Infinity).flexIndex;
+    else maxFlexIndex = 0;
+
+    let task = {
+      name: value,
+      flexIndex: maxFlexIndex + 2,
+      status: 0,
+      parentId: parentId,
+      description: ''
     }
 
-    let index = parent.findIndex(t => t.id === task.id);
-    if (index !== -1) parent.splice(index, 1);
+    let id = await this.indexedDBManager.addObject(task);
+    task.id = id;
+
+    if (inCurrentTasks) this.currentTasks.value.push(task);
   }
 
-  changeTaskName(task, newName) {
+  async removeTask(task, inCurrentTasks=true) {
+    async function getRemoveTreePromises(task, indexedDBManager) {
+      const removeSelfPromise = indexedDBManager.deleteObject(task.id)
+      const childrenPromise = indexedDBManager.getTasksByParentId(task.id).then(children => {
+        return Promise.all( children.map(child => getRemoveTreePromises(child, indexedDBManager)) );
+      });
+      return Promise.all([removeSelfPromise, childrenPromise]);
+    }
+
+    await getRemoveTreePromises(task, this.indexedDBManager);
+
+    if (inCurrentTasks) {
+      let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
+      this.currentTasks.value = newCurrentTasks;
+    }
+  }
+
+  async changeTaskName(task, newName) {
     task.name = newName;
+    await this.indexedDBManager.updateObject(toRaw(task));
   }
 
-  updateDescription(task, newDescription) {
+  async updateDescription(task, newDescription) {
     task.description = newDescription;
+    await this.indexedDBManager.updateObject(toRaw(task));
   }
 
-  pushParent(task) {
+  async updateStatus(task, newStatus) {
+    task.status = newStatus;
+    await this.indexedDBManager.updateObject(toRaw(task));
+  }
+
+  async pushParent(task) {
     this.parentTree.value.push(task);
+    this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(task.id);
   }
 
-  popParent() {
-    return this.parentTree.value.pop();
+  async popParent() {
+    let task = this.parentTree.value.pop();
+    if (task !== undefined) this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(task.parentId);
   }
 
-  selectParentInTree(task) {
-    while ( this.parentTree.value[this.parentTree.value.length-1].id !== task.id ) {
-      this.popParent();
+  async selectParentInTree(task) {
+    let currentParent = this.getCurrentParent();
+    while ( currentParent !== null && currentParent.id !== task.id ) {
+      this.parentTree.value.pop();
+      currentParent = this.getCurrentParent();
     }
+    this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(task.id);
+  }
+
+  getCurrentParent() {
+    let l = this.parentTree.value.length;
+    if (l === 0) return null;
+    return this.parentTree.value[l-1];
   }
 
 }

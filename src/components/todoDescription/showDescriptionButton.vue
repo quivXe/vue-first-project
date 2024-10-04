@@ -8,7 +8,7 @@ const props = defineProps({
 const emit = defineEmits([
     "showDescriptionToggle"
 ])
-console.log(props.disabled);
+
 </script>
 <template>
     <div 
