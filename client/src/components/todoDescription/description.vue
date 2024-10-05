@@ -67,7 +67,7 @@ function onInput() {
             <h4>Description</h4>
             <div class="status-container">
                 <div class="edit-status">
-                    <div v-if="editing" @click="showResult" class="show-result"><img src="@/assets/images/show.png" alt="result"></div>
+                    <div v-if="editing" @click="showResult" class="show-result"><img src="@/assets/images/show.svg" alt="result"></div>
                     <div v-else @click="showEdit" class="show-edit"><img src="@/assets/images/edit.svg" alt="edit"></div>
                 </div>
                 <div class="saving-status">

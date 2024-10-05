@@ -82,9 +82,7 @@ onMounted(() => {
       />
     </div>
   </div>
-  <div class="footer">
-    Icons by <a href="https://icons8.com">Icons8</a>
-  </div>
+  <div class="footer"></div>
   <Options
     v-if="uiManager.showOptions"
     :header="uiManager.optionsMenuData.header"

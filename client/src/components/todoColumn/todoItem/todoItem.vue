@@ -127,7 +127,7 @@ watch(() => props.mouseReleasedToggle, () => {
         <div
             class="options"
             @click="emit('optionsClicked', task)"
-        ></div>
+        ><img src="@/assets/images/more.svg" alt="more"></div>
         <!-- <DeleteItem :task="task" @delete-task="emit('deleteTask', task)"></DeleteItem> -->
     </div>
 </template>
@@ -171,11 +171,9 @@ watch(() => props.mouseReleasedToggle, () => {
         
         .options
             padding: 2px
-            width: 15px
-            background-image: url("@/assets/images/more.png")
-            background-size: contain
-            background-repeat: no-repeat
-            background-position: center
+            display: flex
+            align-items: center
+            justify-content: center
             flex-shrink: 0
             cursor: pointer
 
