@@ -11,29 +11,9 @@ import ShowDescriptionButton from './components/todoDescription/showDescriptionB
 
 import TaskManager from './TaskManager.vue'
 import UIManager from './UIManager.vue'
-import IndexedDBManager from './IndexedDbManager'
+import IndexedDBManager from './IndexedDBManager.js'
 
 const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
-(async () => {
-  // await indexedDBManager.init();
-  // console.log("start")
-  // let tasks = await indexedDBManager.getTasksByParentId(1)
-  // console.log("lol");
-  // console.log(tasks);
-})()
-// temp
-// let task = {
-//   "name": "lolek",
-//   "flexIndex": 2,
-//   "status": 1,
-//   "description": "",
-//   "subTasks": [ 15 ],
-//   "parentId": -1
-// }
-// console.log(task);
-// (async () => {console.log(await indexedDBManager.addObject(task))})()
-
-// temp
 const taskManager = new TaskManager(indexedDBManager);
 taskManager.init();
 const uiManager = new UIManager(taskManager);
