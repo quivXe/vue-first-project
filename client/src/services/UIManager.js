@@ -1,10 +1,11 @@
-<script>
 import { ref } from 'vue'
 
 class UIManager {
   constructor(taskManager) {
     this.taskManager = taskManager;
 
+    this._currentTasks = ref(taskManager.currentTasks);
+    this._parentTree = ref([]);
     this._mouseReleasedToggle = ref(false);
     this._creatingNewTask = ref(false);
     this._showOptions = ref(false);
@@ -21,22 +22,23 @@ class UIManager {
     this.updateDescription = this.updateDescription.bind(this);
     this.addTaskClicked = this.addTaskClicked.bind(this);
     this.newTaskBlur = this.newTaskBlur.bind(this);
-    this.backButtonClicked = this.backButtonClicked.bind(this);
     this.mouseOverTask = this.mouseOverTask.bind(this);
     this.mouseOverColumn = this.mouseOverColumn.bind(this);
     this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
     this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
     this.taskOptionsClicked = this.taskOptionsClicked.bind(this);
-    this.parentClicked = this.parentClicked.bind(this);
     this.getCurrentParent = this.getCurrentParent.bind(this);
+    this.pushParent = this.pushParent.bind(this);
+    this.popParent = this.popParent.bind(this);
+    this.selectParentInTree = this.selectParentInTree.bind(this);
   }
 
   get currentTasks() {
-    return this.taskManager.currentTasks.value;
+    return this._currentTasks.value;
   }
 
   get parentTree() {
-    return this.taskManager.parentTree.value;
+    return this._parentTree.value;
   }
 
   get mouseReleasedToggle() {
@@ -79,7 +81,7 @@ class UIManager {
   }
 
   taskClicked(task) {
-    this.taskManager.pushParent(task);
+    this.pushParent(task);
   }
 
   deleteTaskClicked(task) {
@@ -99,12 +101,9 @@ class UIManager {
   }
 
   newTaskBlur(value) {
-    this.taskManager.addTask(value);
+    let parentId = this.getCurrentParent(true);
+    this.taskManager.addTask(value, parentId);
     this.creatingNewTask = false;
-  }
-
-  backButtonClicked() {
-    this.taskManager.popParent();
   }
 
   mouseOverTask(taskOver) {
@@ -137,7 +136,6 @@ class UIManager {
     };
   }
 
-
   startDraggingTaskTriggered(task) {
     this.draggedTask = this.currentTasks.find(t => t.id == task.id);
   }
@@ -154,17 +152,45 @@ class UIManager {
     this.taskManager.updateStatus(task, task.status);
   }
 
-  parentClicked(parent) {
-    if (parent === null) {
-        parent = this.taskManager.selectParentInTree({id: -1}); // tasks with parentId: -1 are on main page 
+  getCurrentParent(getId=false) {
+    let currentParent = this._parentTree.value[this._parentTree.value.length - 1];
+    if (getId) {
+      return currentParent === undefined ? 
+        -1 :
+        currentParent.id;
+    } else {
+      return currentParent === undefined ?
+        null :
+        currentParent
     }
-    else this.taskManager.selectParentInTree(parent);
   }
 
-  getCurrentParent() {
-    return this.taskManager.getCurrentParent();
+  pushParent(task) {
+    this._parentTree.value.push(task);
+    this.taskManager.updateCurrentTasks(task.id);
+  }
+
+  popParent() {
+    let parentPopped = this._parentTree.value.pop();
+    let newParentId = this.getCurrentParent(true);
+    if (parentPopped !== undefined) this.taskManager.updateCurrentTasks(newParentId);
+    return parentPopped;
+  }
+
+  selectParentInTree(task) {
+    let currentParentId = this.getCurrentParent(true);
+
+    if (task === null) this._parentTree.value = []; // home is clicked
+    else {
+      while (task.id !== this.getCurrentParent(true)) {
+        this.parentTree.pop();
+      }
+    }
+
+    // update current tasks if needed
+    let newParentId = this.getCurrentParent(true);
+    if (currentParentId !== newParentId) this.taskManager.updateCurrentTasks(newParentId);
   }
 }
 
 export default UIManager
-</script>

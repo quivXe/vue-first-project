@@ -9,15 +9,14 @@ import Options from "./components/options.vue"
 import Description from './components/todoDescription/description.vue'
 import ShowDescriptionButton from './components/todoDescription/showDescriptionButton.vue'
 
-import TaskManager from './TaskManager.vue'
-import UIManager from './UIManager.vue'
-import IndexedDBManager from './IndexedDBManager.js'
+import TaskManager from './services/TaskManager.js'
+import UIManager from './services/UIManager.js'
+import IndexedDBManager from './services/IndexedDBManager.js'
 
 const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
 const taskManager = new TaskManager(indexedDBManager);
 taskManager.init();
 const uiManager = new UIManager(taskManager);
-
 
 onMounted(() => {
   document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle });
@@ -29,11 +28,11 @@ onMounted(() => {
   </div>
   <div class="nav">
     <TodoBackButton
-      @backPressed="uiManager.backButtonClicked"
+      @backPressed="uiManager.popParent"
     />
     <TodoParentTree
       :parents="uiManager.parentTree"
-      @parent-clicked="uiManager.parentClicked"
+      @parent-clicked="uiManager.selectParentInTree"
     />
   </div>
   <div class="main">
@@ -104,7 +103,7 @@ onMounted(() => {
 </template>
 
 <style lang="sass" scoped>
-  @use "@/assets/common"
+  @use "@/assets/styles/common"
 
   *
     box-sizing: border-box

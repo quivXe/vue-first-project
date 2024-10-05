@@ -83,7 +83,7 @@ function onInput() {
     </div>
 </template>
 <style lang="sass" scoped>
-    @use "@/assets/common"
+    @use "@/assets/styles/common"
 
     $info-bar-height: 12%
 

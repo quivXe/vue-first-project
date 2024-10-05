@@ -14,7 +14,7 @@ const emit = defineEmits([
 </template>
 
 <style scoped lang="sass">
-    @use "@/assets/common"
+    @use "@/assets/styles/common"
 
     .container
         box-sizing: border-box

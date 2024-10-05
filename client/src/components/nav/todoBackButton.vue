@@ -14,7 +14,7 @@ const emit = defineEmits([
 </template>
 
 <style lang="sass" scoped>
-@use "@/assets/common"
+@use "@/assets/styles/common"
 
 div
     padding: 10px 30px

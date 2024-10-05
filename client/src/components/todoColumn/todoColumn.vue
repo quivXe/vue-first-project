@@ -22,7 +22,7 @@ const emit = defineEmits([
     </div>
 </template>
 <style lang="sass" scoped>
-    @use "@/assets/common"
+    @use "@/assets/styles/common"
 
     .column-container 
         display: flex

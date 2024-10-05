@@ -21,7 +21,7 @@ const props = defineProps({
     </div>
 </template>
 <style scoped lang="sass">
-    @use "@/assets/common"
+    @use "@/assets/styles/common"
 
 
 

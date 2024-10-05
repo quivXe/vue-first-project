@@ -133,7 +133,7 @@ watch(() => props.mouseReleasedToggle, () => {
 </template>
 
 <style scoped lang="sass">
-    @use "@/assets/common"
+    @use "@/assets/styles/common"
 
     .container
         user-select: none
