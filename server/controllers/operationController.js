@@ -14,9 +14,12 @@ exports.logOperation = async (req, res) => {
       operation_part, 
       operation_max_part 
     });
+
+    // PUSHER
+
     res.status(201).json(newOperation);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -34,6 +37,6 @@ exports.getOperationsForCollab = async (req, res) => {
     const operations = await Operation.findAll({ where: conditions });
     res.json(operations);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: err.message });
   }
 };

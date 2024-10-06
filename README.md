@@ -21,7 +21,7 @@ Using: VUE 3, Node.js, Pusher, SASS
 - body: `{ name, password }`
 **RESPONSE**:
 - 201: `{ name: collabName }`
-- 404: `{ message: 'Collaboration not found or password incorrect.' }`
+- 404: `{ error: 'Collaboration not found or password incorrect.' }`
 
 ## OPERATIONS:
 ### /api/operations/log

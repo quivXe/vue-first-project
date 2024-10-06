@@ -1,5 +1,7 @@
 // /server/controllers/collabController.js
+const { compare } = require('bcrypt');
 const { Collaboration } = require('../models');
+const { hashPassword, comparePasswords } = require("../utils/hashUtils");
 
 // Create a new collaboration
 exports.createCollaboration = async (req, res) => {
@@ -12,8 +14,9 @@ exports.createCollaboration = async (req, res) => {
       return res.status(400).json({ error: 'A collaboration with this name already exists' })
     }
 
+    const hashedPassword = await hashPassword(password);
     // Create new collab
-    const newCollab = await Collaboration.create({ name, password }); // TODO: REMOVE PASSWORD FROM RESPONSE
+    const newCollab = await Collaboration.create({ name, password: hashedPassword });
     res.status(201).json({ name: newCollab.name });
 
   } catch (error) {
@@ -26,12 +29,20 @@ exports.createCollaboration = async (req, res) => {
 exports.joinCollaboration = async (req, res) => {
   const { name, password } = req.body;
   try {
-    const collab = await Collaboration.findOne({ where: { name, password } });
-    if (!collab) {
-      return res.status(404).json({ message: 'Collaboration not found or password incorrect.' });
+
+    const collab = await Collaboration.findOne({ where: { name } });
+    let isMatch;
+    
+    if (collab) {
+      isMatch = await comparePasswords(password, collab.password);
     }
-    res.status(201).json({ name: collabName });
+    if (!collab || !isMatch) {
+      return res.status(404).json({ error: 'Collaboration not found or password incorrect.' });
+    }
+
+    res.status(201).json({ name: name });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ error: err.message });
   }
 };

@@ -11,14 +11,14 @@
 
 console.log("hej")
 let payload = {
-    name: "colab namee",
-    password: "my password"
+    name: "team1",
+    password: "lolek"
 };
 payload = JSON.stringify(payload);
 
 let _;
 (async () => {
-    fetch("/api/collaborations/create",
+    fetch("/api/collaborations/join",
         {
             method: 'POST',
             headers: {

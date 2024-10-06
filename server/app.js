@@ -7,10 +7,13 @@ const path = require('path');
 const { sequelize } = require('./models'); // Import Sequelize instance
 const collaborationRoutes = require('./routes/collaborationRoutes');
 const operationRoutes = require('./routes/operationRoutes');
+const createRateLimiter = require('./middlewares/rateLimiter');
 
 const app = express();
 
 // Middleware
+const globalLimiter = createRateLimiter(15 * 60 * 1000, 100);
+app.use(globalLimiter);
 app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json()); // Parse JSON request bodies
 
