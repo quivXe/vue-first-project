@@ -1,6 +1,6 @@
 import Tasks from '../views/Tasks.vue';          // Your local tasks
 import ShareTask from '../views/ShareTask.vue';        // Create collaboration
-import CollaborationsList from '../views/CollaborationsList.vue';  // View shared tasks
+import SharedTasks from '../views/SharedTasks.vue';  // View shared tasks
 import JoinCollaboration from '../views/JoinCollaboration.vue';    // Join a shared task
 import NotFound from '../views/NotFound.vue';          // 404 Not Found
 
@@ -22,17 +22,17 @@ const routes = [
 
     // List of tasks user is collaborating on
     {
-        path: '/collaborations',
-        name: 'CollaborationsList',
-        component: CollaborationsList,  // List of all collaborations
+        path: '/shared',
+        name: 'SharedTasks',
+        component: SharedTasks,  // List of all collaborations
     },
 
-    // View or edit a specific collaborative task
+    // Join collaboration
     {
         path: '/collaborations/:collaborationName',
         name: 'TaskCollaboration',
-        component: Tasks,   // Collaborative task detail page
-        props: { collaborative: true },   // Pass taskId as a prop
+        component: Tasks,
+        props: { collaborative: true },
     },
 
     // Join a collaboration using credentials (invitation link)
