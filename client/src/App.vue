@@ -18,6 +18,7 @@
       height: common.$header-height
       background-color: common.$bg-color
       color: common.$header-text-color
+      box-sizing: border-box
 
       border-bottom: common.$border
 

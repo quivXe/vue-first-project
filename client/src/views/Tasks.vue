@@ -13,6 +13,13 @@ import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
 
+const props = defineProps({
+  collaborative: {
+    type: Boolean,
+    default: false
+  }
+})
+
 const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
 const taskManager = new TaskManager(indexedDBManager);
 taskManager.init();
