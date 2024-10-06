@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+</head>
+<body>
+    Testing
+    <script>
+
+console.log("hej")
+let payload = {
+    name: "colab namee",
+    password: "my password"
+};
+payload = JSON.stringify(payload);
+
+let _;
+(async () => {
+    fetch("/api/collaborations/create",
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: payload
+        }
+    )
+    .then (res => {
+
+        if (!res.ok) {
+            return res.json().then(errorData => {
+                console.log(errorData)
+                throw new Error(errorData.error || 'Something went wrong');
+            })
+        }
+        return res.json();
+    })
+    .then (data => {
+        console.log("d:", data);
+    })
+    .catch (error => {
+        console.log(error);
+        console.log("Error:", error.message);
+    })
+})();
+    </script>
+</body>
+</html>
