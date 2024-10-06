@@ -1,13 +1,16 @@
 <script setup>
 import { onMounted } from 'vue'
-import TodoParentTree from '../components/nav/todoParentTree.vue'
-import TodoItem from "../components/todoColumn/todoItem/todoItem.vue"
-import TodoBackButton from "../components/nav/todoBackButton.vue"
-import TodoColumn from "../components/todoColumn/todoColumn.vue"
-import TodoItemAdd from "../components/todoColumn/todoItem/todoItemAdd.vue"
-import Options from "../components/options.vue"
-import Description from '../components/todoDescription/description.vue'
-import ShowDescriptionButton from '../components/todoDescription/showDescriptionButton.vue'
+
+import {
+  AddTaskButton,
+  Column,
+  Options,
+  Task,
+  Description,
+  ShowDescriptionButton,
+  BackButton,
+  ParentTree
+} from '@/components/todoTasks';
 
 import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
@@ -31,27 +34,27 @@ onMounted(() => {
 </script>
 <template>
   <div class="nav">
-    <TodoBackButton
+    <BackButton
       @backPressed="uiManager.popParent"
     />
-    <TodoParentTree
+    <ParentTree
       :parents="uiManager.parentTree"
       @parent-clicked="uiManager.selectParentInTree"
     />
   </div>
   <div class="main">
     <div class="columns">
-      <TodoColumn
+      <Column
         v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
         :key="taskStatusNumber"
         :column-status-number="taskStatusNumber"
         :task-status-name="taskStatusName"
         @mouse-over-column="uiManager.mouseOverColumn"
       >
-        <TodoItemAdd
+        <AddTaskButton
           v-if="taskStatusNumber === uiManager.TASK_STATUSES.TODO"
           @click="uiManager.addTaskClicked"/>
-        <TodoItem
+        <Task
           v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
           :key="task.id"
           :task="task"
@@ -66,12 +69,12 @@ onMounted(() => {
           @options-clicked="uiManager.taskOptionsClicked"
           @change-name-blur="uiManager.changeTaskName"
         />
-        <TodoItem
+        <Task
           v-if="uiManager.creatingNewTask && taskStatusNumber === uiManager.TASK_STATUSES.TODO"
           :create-new="true"
           @new-task-blur="uiManager.newTaskBlur"
         />
-      </TodoColumn>
+      </Column>
     </div>
     <div class="description-container">
       <ShowDescriptionButton

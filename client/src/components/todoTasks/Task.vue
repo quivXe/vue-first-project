@@ -128,7 +128,6 @@ watch(() => props.mouseReleasedToggle, () => {
             class="options"
             @click="emit('optionsClicked', task)"
         ><img src="@/assets/images/more.svg" alt="more"></div>
-        <!-- <DeleteItem :task="task" @delete-task="emit('deleteTask', task)"></DeleteItem> -->
     </div>
 </template>
 
