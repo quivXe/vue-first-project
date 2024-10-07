@@ -10,7 +10,6 @@ const routes = [
         path: '/',
         name: 'LocalTasks',
         component: Tasks,  // Local tasks list
-        props: { collaborative: false }
     },
     
     // Create a collaboration (share task with others)
@@ -31,8 +30,7 @@ const routes = [
     {
         path: '/collaborations/:collaborationName',
         name: 'TaskCollaboration',
-        component: Tasks,
-        props: { collaborative: true },
+        component: Tasks
     },
 
     // Join a collaboration using credentials (invitation link)

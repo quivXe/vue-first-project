@@ -64,7 +64,7 @@ function onSubmit() {
     })
     .then(async res => {
         if (!res.ok) {
-
+            return { name: collabName.value.trim() } // temp
             
             // collaboration name is taken
             if (res.status === 400) {
@@ -92,20 +92,22 @@ function onSubmit() {
 
         const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
-        async function exportTask(parentId) {
+        async function exportTask(parentId, newParentId) {
             const parent = await localIndexedDBManager.getObjectById(parentId);
             delete parent.id;
             parent.collabName = data.name;
+            parent.newParentId = newParentId;
 
-            const addSelfPromise = collabIndexedDBManager.addObject(parent);
+            const newParent = await collabIndexedDBManager.addObject(parent);
+
             const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
-                return Promise.all( children.map(child => exportTask( child.id )) );
+                return Promise.all( children.map(child => exportTask( child.id, newParent.id )) );
             });
-            return Promise.all([ addSelfPromise, addChildrenPromise ]);
+            return Promise.all([ addChildrenPromise ]);
         } 
         
         // export whole task to collab store
-        exportTask(taskIdFromRoute)
+        exportTask(taskIdFromRoute, -1)
         .then(() => {
             tempOutput.value = JSON.stringify(data);
             additionalInfo.value = "Collaboration created!"

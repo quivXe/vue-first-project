@@ -7,7 +7,6 @@ class UIManager {
 
     this.router = useRouter();
 
-    this._currentTasks = ref(taskManager.currentTasks);
     this._parentTree = ref([]);
     this._mouseReleasedToggle = ref(false);
     this._creatingNewTask = ref(false);
@@ -34,6 +33,11 @@ class UIManager {
     this.pushParent = this.pushParent.bind(this);
     this.popParent = this.popParent.bind(this);
     this.selectParentInTree = this.selectParentInTree.bind(this);
+  }
+
+  init(taskManager) {
+    this.taskManager = taskManager;
+    this._currentTasks = ref(this.taskManager.currentTasks);
   }
 
   get currentTasks() {

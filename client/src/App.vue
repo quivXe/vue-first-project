@@ -9,7 +9,7 @@
     <div class="main-nav">
       <ul>
         <li>
-          <router-link to="/">
+          <router-link :key="$route.fullPath" to="/">
             <img src="@/assets/images/local_tasks.svg" alt="">
             <span>Your tasks</span>
           </router-link>
@@ -29,7 +29,9 @@
       </ul>
     </div>
   </div>
-  <router-view></router-view>
+  <div class="router-view-container">
+    <router-view></router-view>
+  </div>
   <div class="footer"></div>
 </template>
 <style lang="sass" scoped>
@@ -96,6 +98,11 @@
 
 
 
+  .router-view-container
+    background-color: common.$bg-color
+    width: 100%
+    height: calc(100vh - common.$header-height)
+    
   .footer
     display: none
 </style>

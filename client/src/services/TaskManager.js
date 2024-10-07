@@ -1,7 +1,7 @@
 import { toRaw, ref } from 'vue'
 
 class TaskManager {
-  constructor(indexedDBManager) {
+  constructor(indexedDBManager, collabName=null) {
     this.TASK_STATUSES = {
       TODO: 0,
       DOING: 1,
@@ -11,6 +11,7 @@ class TaskManager {
     this.indexedDBManager = indexedDBManager;
 
     this.currentTasks = ref([]);
+    this.collabName = collabName;
 
     this.addTask = this.addTask.bind(this);
     this.removeTask = this.removeTask.bind(this);
@@ -22,7 +23,12 @@ class TaskManager {
   }
 
   async updateCurrentTasks(parentId) {
-    this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
+    if (parentId === -1 && this.collabName !== null) {
+      let tasks = await this.indexedDBManager.getTasksByParentId(parentId);
+      this.currentTasks.value = tasks.filter(t => t.collabName === this.collabName);
+    } else {
+      this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
+    }
   }
 
   async getTaskById(taskId) {

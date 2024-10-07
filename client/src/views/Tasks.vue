@@ -1,5 +1,6 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, watch, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import {
   AddTaskButton,
@@ -16,94 +17,114 @@ import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
 
-const props = defineProps({
-  collaborative: {
-    type: Boolean,
-    default: false
+let indexedDBManager = null;
+let taskManager = null;
+const uiManager = new UIManager();
+
+const managersLoaded = ref(false);
+
+const route = useRoute();
+
+const initializeManagers = async () => {
+  const collaborating = route.name === "TaskCollaboration";
+  const collabName = collaborating ? route.params.collaborationName : null;
+  indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
+  taskManager = new TaskManager(indexedDBManager, collabName);
+  await taskManager.init();
+  uiManager.init(taskManager);
+
+  managersLoaded.value = true;
+}
+
+// check for route change ( from collab to local cuz it didnt refresh managers )
+watch(() => route.name, (newName, oldName) => {
+  if ( newName !== oldName ) {
+    managersLoaded.value = false;
+    initializeManagers();
   }
 })
 
-const indexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
-const taskManager = new TaskManager(indexedDBManager);
-taskManager.init();
-const uiManager = new UIManager(taskManager);
+onMounted(async () => {
+  await initializeManagers(route);
 
-onMounted(() => {
   document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle });
 })
 </script>
 <template>
-  <div class="nav">
-    <BackButton
-      @backPressed="uiManager.popParent"
-    />
-    <ParentTree
-      :parents="uiManager.parentTree"
-      @parent-clicked="uiManager.selectParentInTree"
-    />
-  </div>
-  <div class="main">
-    <div class="columns">
-      <Column
-        v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
-        :key="taskStatusNumber"
-        :column-status-number="taskStatusNumber"
-        :task-status-name="taskStatusName"
-        @mouse-over-column="uiManager.mouseOverColumn"
-      >
-        <AddTaskButton
-          v-if="taskStatusNumber === uiManager.TASK_STATUSES.TODO"
-          @click="uiManager.addTaskClicked"/>
-        <Task
-          v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
-          :key="task.id"
-          :task="task"
-          :mouse-released-toggle="uiManager.mouseReleasedToggle"
-          :_dragging="task.id === uiManager.draggedTask?.id"
-          :change-name="uiManager.changingTaskName?.id === task.id"
-          @task-clicked="uiManager.taskClicked"
-          @delete-task="uiManager.deleteTaskClicked"
-          @mouse-over-task="uiManager.mouseOverTask"
-          @start-dragging="uiManager.startDraggingTaskTriggered"
-          @stop-dragging="uiManager.stopDraggingTaskTriggered"
-          @options-clicked="uiManager.taskOptionsClicked"
-          @change-name-blur="uiManager.changeTaskName"
-        />
-        <Task
-          v-if="uiManager.creatingNewTask && taskStatusNumber === uiManager.TASK_STATUSES.TODO"
-          :create-new="true"
-          @new-task-blur="uiManager.newTaskBlur"
-        />
-      </Column>
-    </div>
-    <div class="description-container">
-      <ShowDescriptionButton
-        @show-description-toggle="uiManager.showDescription = !uiManager.showDescription"
-        :is-description-shown="uiManager.showDescription"
-        :disabled="uiManager.getCurrentParent() === null"
+  <div class="wrapper" v-if="managersLoaded">
+
+    <div class="nav">
+      <BackButton
+        @backPressed="uiManager.popParent"
       />
-      <Description
-        v-if="uiManager.showDescription"
-        :task="uiManager.getCurrentParent()"  
-        @save-description="uiManager.updateDescription"
+      <ParentTree
+        :parents="uiManager.parentTree"
+        @parent-clicked="uiManager.selectParentInTree"
       />
     </div>
+    <div class="main">
+      <div class="columns">
+        <Column
+          v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
+          :key="taskStatusNumber"
+          :column-status-number="taskStatusNumber"
+          :task-status-name="taskStatusName"
+          @mouse-over-column="uiManager.mouseOverColumn"
+        >
+          <AddTaskButton
+            v-if="taskStatusNumber === uiManager.TASK_STATUSES.TODO"
+            @click="uiManager.addTaskClicked"/>
+          <Task
+            v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
+            :key="task.id"
+            :task="task"
+            :mouse-released-toggle="uiManager.mouseReleasedToggle"
+            :_dragging="task.id === uiManager.draggedTask?.id"
+            :change-name="uiManager.changingTaskName?.id === task.id"
+            @task-clicked="uiManager.taskClicked"
+            @delete-task="uiManager.deleteTaskClicked"
+            @mouse-over-task="uiManager.mouseOverTask"
+            @start-dragging="uiManager.startDraggingTaskTriggered"
+            @stop-dragging="uiManager.stopDraggingTaskTriggered"
+            @options-clicked="uiManager.taskOptionsClicked"
+            @change-name-blur="uiManager.changeTaskName"
+          />
+          <Task
+            v-if="uiManager.creatingNewTask && taskStatusNumber === uiManager.TASK_STATUSES.TODO"
+            :create-new="true"
+            @new-task-blur="uiManager.newTaskBlur"
+          />
+        </Column>
+      </div>
+      <div class="description-container">
+        <ShowDescriptionButton
+          @show-description-toggle="uiManager.showDescription = !uiManager.showDescription"
+          :is-description-shown="uiManager.showDescription"
+          :disabled="uiManager.getCurrentParent() === null"
+        />
+        <Description
+          v-if="uiManager.showDescription"
+          :task="uiManager.getCurrentParent()"  
+          @save-description="uiManager.updateDescription"
+        />
+      </div>
+    </div>
+    <Options
+      v-if="uiManager.showOptions"
+      :header="uiManager.optionsMenuData.header"
+      :options="uiManager.optionsMenuData.options"
+    />
+    <div
+      v-if="uiManager.showOptions"
+      @click="uiManager.showOptions = false"
+      class="options-overlay"
+    ></div>
+    <div
+      v-if="uiManager.showDescription"
+      @click="uiManager.showDescription = false"
+      class="description-overlay"
+    ></div>
   </div>
-  <Options
-    v-if="uiManager.showOptions"
-    :header="uiManager.optionsMenuData.header"
-    :options="uiManager.optionsMenuData.options"
-  />
-  <div
-    v-if="uiManager.showOptions"
-    @click="uiManager.showOptions = false"
-    class="options-overlay"
-  ></div>
-  <div
-    v-if="uiManager.showDescription"
-    @click="uiManager.showDescription = false"
-    class="description-overlay"
-  ></div>
 </template>
 
 <style lang="sass" scoped>

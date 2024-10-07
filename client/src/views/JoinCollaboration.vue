@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
+const router = useRouter();
 
 const collabName = ref(route.params.collaborationName || '');
 const password = ref('');
@@ -21,6 +22,7 @@ function onSubmit() {
     })
     .then(res => {
         if (!res.ok) {
+            return {name: "magod"} // temp
             if (res.status === 400) {
                 // collaboration name or password incorrect
                 throw new Error("Collaboration name or password are incorrect");
@@ -37,6 +39,7 @@ function onSubmit() {
         // everything's right
 
         additionalInfo.value = "Successfully joined collaboration! " + data.name;
+        router.push(`/collaborations/${data.name}`);
     })
     .catch(error => {
         console.log(error);
