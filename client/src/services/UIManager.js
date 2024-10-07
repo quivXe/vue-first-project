@@ -1,8 +1,11 @@
 import { ref } from 'vue'
+import { useRouter } from 'vue-router';
 
 class UIManager {
   constructor(taskManager) {
     this.taskManager = taskManager;
+
+    this.router = useRouter();
 
     this._currentTasks = ref(taskManager.currentTasks);
     this._parentTree = ref([]);
@@ -124,14 +127,21 @@ class UIManager {
     this.optionsMenuData = {
       header: "OPTIONS",
       options: [
-        { name: "Delete", callback: () => {
-          this.showOptions = false;
-          this.taskManager.removeTask(task);
+        { 
+          name: "Delete", callback: () => {
+            this.showOptions = false;
+            this.taskManager.removeTask(task);
         }},
-        { name: "Change name", callback: () => {
-          this.changingTaskName = task;
-          this.showOptions = false;
-        }}
+        { 
+          name: "Change name", callback: () => {
+            this.changingTaskName = task;
+            this.showOptions = false;
+        }},
+        {
+          name: "Share", callback: () => {
+            this.router.push({ name: 'ShareTask', params: { taskId: task.id } });
+          }
+        }
       ]
     };
   }

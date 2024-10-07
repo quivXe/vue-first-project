@@ -15,7 +15,7 @@ const routes = [
     
     // Create a collaboration (share task with others)
     {
-        path: '/tasks/share',
+        path: '/share/:taskId',
         name: 'ShareTask',
         component: ShareTask,  // Page to create a collaborative task
     },

@@ -73,7 +73,7 @@
 
         li
           text-align: center
-          // position: relative 
+          
           a
             color: common.$header-text-color
             text-decoration: none

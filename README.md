@@ -6,7 +6,7 @@ Using: VUE 3, Node.js, Pusher, SASS
 
 # server API
 
-## COLABORATIONS:
+## COLLABORATIONS:
 ### /api/collaborations/create
 #### REQUEST
 - headers: `{ 'Content-Type': 'application/json' }`
@@ -14,6 +14,9 @@ Using: VUE 3, Node.js, Pusher, SASS
 #### RESPONSE
 - 201: `{ name: createdCollabName }`
 - 400: `{ error: 'A collaboration with this name already exists' }`
+- 401:
+    - `{ error: 'Invalid characters in name. Only letters, numbers, and _ - = @ , . ; are allowed.' }`
+    - `{ error: 'Name length cannot be longer than 156' }`
 
 ### /api/collaborations/join
 #### REQUEST

@@ -8,6 +8,19 @@ exports.createCollaboration = async (req, res) => {
   const { name, password } = req.body;
   try {
 
+    // Define a regular expression to allow only valid characters
+    const allowedCharacters = /^[a-zA-Z0-9_\-=@,.;]+$/;
+
+    // Validate the 'name' and 'password' fields for illegal characters
+    if (!allowedCharacters.test(name) || !allowedCharacters.test(password)) {
+      return res.status(401).json({ error: 'Invalid characters in name or password. Only letters, numbers, and _ - = @ , . ; are allowed.' });
+    }
+
+    // Validate length
+    if (name.length > 156) {
+      return res.status(401).json({ error: 'Name length cannot be longer than 156' });
+    }
+
     // Check if the collaboration with the provided name already exists
     const existingCollab = await Collaboration.findOne({ where: { name } });
     if (existingCollab) {
