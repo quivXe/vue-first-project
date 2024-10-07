@@ -23,7 +23,7 @@ const props = defineProps({
   }
 })
 
-const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
+const indexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
 const taskManager = new TaskManager(indexedDBManager);
 taskManager.init();
 const uiManager = new UIManager(taskManager);

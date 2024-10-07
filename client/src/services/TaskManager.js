@@ -12,7 +12,6 @@ class TaskManager {
 
     this.currentTasks = ref([]);
 
-    // Binding all methods to ensure 'this' refers to the correct context
     this.addTask = this.addTask.bind(this);
     this.removeTask = this.removeTask.bind(this);
     this.updateDescription = this.updateDescription.bind(this);
@@ -21,7 +20,7 @@ class TaskManager {
   async init(currentParentId=-1) {
     await this.updateCurrentTasks(currentParentId);
   }
-  
+
   async updateCurrentTasks(parentId) {
     this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
   }
@@ -29,6 +28,7 @@ class TaskManager {
   async getTaskById(taskId) {
     return this.indexedDBManager.getObjectById(taskId);
   }
+
   async addTask(value, parentId, inCurrentTasks=true) {
 
     // get maxFlexIndex

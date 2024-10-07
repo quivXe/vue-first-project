@@ -4,8 +4,8 @@ import { ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
 import TaskManager from '../services/TaskManager'
 
-const indexedDBManager = new IndexedDBManager("TODO_APP", "tasks");
-const taskManager = new TaskManager(indexedDBManager);
+const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
+const localTaskManager = new TaskManager(localIndexedDBManager);
 
 const collabName = ref('');
 const password = ref('');
@@ -15,15 +15,15 @@ const tempOutput = ref("");
 
 const route = useRoute();
 const router = useRouter();
-const taskId = parseInt(route.params.taskId);
+const taskIdFromRoute = parseInt(route.params.taskId);
 const taskName = ref("");
 
 // validate taskId and set taskName
 (async () => {
-    if (isNaN(taskId)) {
+    if (isNaN(taskIdFromRoute)) {
         router.push("/not-found");
     }
-    const task = await taskManager.getTaskById(taskId);
+    const task = await localTaskManager.getTaskById(taskIdFromRoute);
     if (task === undefined) {
         router.push("/not-found");
     }
@@ -53,10 +53,10 @@ function filterName() {
 function onSubmit() {
     
     filterName();
-    let name = collabName.value;
+    let name = collabName.value.trim();
     const payload = JSON.stringify({
         'name': name,
-        'password': password.value
+        'password': password.value.trim()
     })
     fetch("/api/collaborations/create", {
         method: 'POST',
@@ -74,16 +74,45 @@ function onSubmit() {
             } 
             
             else {
-                const errorData = await res.json();
+                try {
+                    const errorData = await res.json();
+                }
+                catch {
+                    // return {'name': name} // temp
+                   throw new Error("Cannot connect to server"); 
+                }
                 throw new Error(errorData.error || "Something went wrong");
             }
         }
         return res.json();
     })
-    .then(data => {
-        tempOutput.value = JSON.stringify(data);
+    .then(async data => {
+        // everything's right
 
-        additionalInfo.value = "Collaboration created!"
+        const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
+
+        async function exportTask(parentId) {
+            const parent = await localTaskManager.getTaskById(parentId);
+            delete parent.id;
+            parent.collabName = data.name;
+
+            const addSelfPromise = collabIndexedDBManager.addObject(parent);
+            const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
+                return Promise.all( children.map(child => exportTask( child.id )) );
+            });
+            return Promise.all([ addSelfPromise, addChildrenPromise ]);
+        } 
+        
+        // export whole task to collab store
+        exportTask(taskIdFromRoute)
+        .then(() => {
+            tempOutput.value = JSON.stringify(data);
+            additionalInfo.value = "Collaboration created!"
+        })
+        .catch(error => {
+            throw new Error("Something went wrong while saving", error);
+        })
+
     })
     .catch(error => {
         console.log("Error:", error.message);

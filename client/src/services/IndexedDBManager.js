@@ -1,17 +1,14 @@
 import { openDB } from 'idb';
 
-const VERSION = 1;
+const VERSION = 2;
 
 class IndexedDBManager {
     constructor(dbName, storeName) {
         this.dbName = dbName;
         this.storeName = storeName;
-        this.dbPromise = this.initializeDB(); // Call initializeDB only once
+        this.dbPromise = this.initializeDB();
     }
     
-    async init() {
-      this.dbPromise = this.initializeDB()
-    }
 
     async initializeDB() {
       const storeName = this.storeName;
@@ -19,17 +16,26 @@ class IndexedDBManager {
         return openDB(this.dbName, VERSION, {
             upgrade(db) {
                 // Create an object store if it doesn't exist
-                if (!db.objectStoreNames.contains(storeName)) {
-                    const store = db.createObjectStore(storeName, {
+                if (!db.objectStoreNames.contains("local_tasks")) {
+                    const store = db.createObjectStore("local_tasks", {
                         keyPath: 'id', // Use 'id' as the key path
                         autoIncrement: true,
                     });
                     
                     store.createIndex('parentId', 'parentId');
                 }
+                if (!db.objectStoreNames.contains("collab_tasks")) {
+                    const store = db.createObjectStore("collab_tasks", {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+
+                    store.createIndex('parentId', 'parentId');
+                    store.createIndex('collabName', 'collabName');
+                }
             }
         });
-    }
+    };
 
     async addObject(object) {
         const db = await this.dbPromise;
@@ -62,11 +68,17 @@ class IndexedDBManager {
         const db = await this.dbPromise;
         return await db.getAll(this.storeName);
     }
+
     async getTasksByParentId(parentId) {
       const db = await this.dbPromise;
       const tasks = await db.getAllFromIndex(this.storeName, "parentId", parentId);
       return tasks;
-  }
+    }
+
+    async getTasksByCollabId(collabName) {
+        const db = await this.dbPromise;
+        const tasks = await db.getAllFromIndex(this.storeName, "collabName", collabName)
+    }
 }
 
 export default IndexedDBManager;
