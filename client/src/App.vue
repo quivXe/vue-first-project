@@ -15,9 +15,9 @@
           </router-link>
         </li>
         <li>
-          <router-link to="/shared">
+          <router-link to="/collaborations">
             <img src="@/assets/images/shared_tasks.svg" alt="">
-            <span>Shared tasks</span>
+            <span>Collaborations</span>
           </router-link>
         </li>
         <li>
@@ -73,7 +73,7 @@
 
         li
           text-align: center
-          
+
           a
             color: common.$header-text-color
             text-decoration: none

@@ -75,7 +75,7 @@ class IndexedDBManager {
       return tasks;
     }
 
-    async getTasksByCollabId(collabName) {
+    async getTasksByCollabName(collabName) {
         const db = await this.dbPromise;
         const tasks = await db.getAllFromIndex(this.storeName, "collabName", collabName)
     }

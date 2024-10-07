@@ -2,10 +2,8 @@
 import { useRoute, useRouter } from 'vue-router';
 import { ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
-import TaskManager from '../services/TaskManager'
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
-const localTaskManager = new TaskManager(localIndexedDBManager);
 
 const collabName = ref('');
 const password = ref('');
@@ -23,7 +21,7 @@ const taskName = ref("");
     if (isNaN(taskIdFromRoute)) {
         router.push("/not-found");
     }
-    const task = await localTaskManager.getTaskById(taskIdFromRoute);
+    const task = await localIndexedDBManager.getObjectById(taskIdFromRoute);
     if (task === undefined) {
         router.push("/not-found");
     }
@@ -58,6 +56,7 @@ function onSubmit() {
         'name': name,
         'password': password.value.trim()
     })
+    // TODO: check if name is in collab_tasks idb before checking it on server
     fetch("/api/collaborations/create", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,15 +75,17 @@ function onSubmit() {
             else {
                 try {
                     const errorData = await res.json();
+                    throw new Error(errorData.error || "Something went wrong");
                 }
                 catch {
                     // return {'name': name} // temp
                    throw new Error("Cannot connect to server"); 
                 }
-                throw new Error(errorData.error || "Something went wrong");
             }
         }
-        return res.json();
+        else {
+            return res.json();
+        }
     })
     .then(async data => {
         // everything's right
@@ -92,7 +93,7 @@ function onSubmit() {
         const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
         async function exportTask(parentId) {
-            const parent = await localTaskManager.getTaskById(parentId);
+            const parent = await localIndexedDBManager.getObjectById(parentId);
             delete parent.id;
             parent.collabName = data.name;
 
@@ -144,12 +145,12 @@ function onSubmit() {
             <div class="field">
                 <label for="collab-name">Collaboration's name</label>
                 <input type="text" id="collab-name" v-model="collabName" @input=filterName required>
-                <p>{{ additionalInfo }}</p>
             </div>
             <div class="field">
                 <label for="password">Password</label>
                 <input type="password" id="password" v-model="password" required>
             </div>
+            <p>{{ additionalInfo }}</p>
             <input type="submit" value="Share it!">
         </form>
     </div>

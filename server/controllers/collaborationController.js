@@ -50,7 +50,7 @@ exports.joinCollaboration = async (req, res) => {
       isMatch = await comparePasswords(password, collab.password);
     }
     if (!collab || !isMatch) {
-      return res.status(404).json({ error: 'Collaboration not found or password incorrect.' });
+      return res.status(400).json({ error: 'Collaboration not found or password incorrect.' });
     }
 
     res.status(201).json({ name: name });
