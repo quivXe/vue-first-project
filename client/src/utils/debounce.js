@@ -24,9 +24,12 @@ class Debounce {
     stop() {
         if (this.timeoutId !== null) clearTimeout(this.timeoutId);
     }
-    /** Trigger callback immediately */
+    /** Trigger callback immediately if queried */
     now() {
-        this.callback();
+        if (this.timeoutId !== null) {
+            clearTimeout(this.timeoutId);
+            this.callback();
+        }
     }
 }
 

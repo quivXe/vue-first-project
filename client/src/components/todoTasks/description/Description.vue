@@ -1,8 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import Debounce from '../../../utils/debounce';
+
+// TODO: style for task.name in header
 
 marked.use({
     breaks: true
@@ -11,7 +13,6 @@ marked.use({
 const props = defineProps({
     "task": Object
 })
-
 const emit = defineEmits([
     "saveDescription"
 ])
@@ -23,7 +24,6 @@ const delayedSave = new Debounce(() => {
 
 const saving = ref(false);
 const editing = ref(false);
-
 const descContent = ref(props.task.description);
 
 const output = computed(() => {
@@ -34,20 +34,24 @@ const output = computed(() => {
 function showEdit() {
     editing.value = true;
 }
-
 function showResult() {
     editing.value = false;
 }
-
 function onInput() {
     saving.value = true;
     delayedSave.run();
 }
+
+// if closing description occurs before data was saved, save immediately before unmounting
+onBeforeUnmount(() => {
+    delayedSave.now();
+});
+
 </script>
 <template>
     <div class="container">
         <div class="info-bar">
-            <h4>Description</h4>
+            <h4>Description - {{ props.task.name }}</h4>
             <div class="status-container">
                 <div class="edit-status">
                     <div v-if="editing" @click="showResult" class="show-result"><img src="@/assets/images/show.svg" alt="result"></div>
