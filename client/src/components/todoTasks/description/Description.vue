@@ -2,28 +2,11 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import Debounce from '..../utils/delay';
 
 marked.use({
     breaks: true
 })
-
-class Delay {
-    constructor(callback, ms) {
-        this.callback = callback;
-        this.ms = ms;
-        this.timeoutId = null;
-
-        this.run = this.run.bind(this);
-        this.stop = this.stop.bind(this);
-    }
-    run() {
-        this.stop();
-        this.timeoutId = setTimeout(this.callback, this.ms);
-    }
-    stop() {
-        if (this.timeoutId !== null) clearTimeout(this.timeoutId);
-    }
-}
 
 const props = defineProps({
     "task": Object
@@ -33,7 +16,7 @@ const emit = defineEmits([
     "saveDescription"
 ])
 
-const delayedSave = new Delay(() => {
+const delayedSave = new Debounce(() => {
     saving.value = false;
     emit("saveDescription", props.task, descContent.value);
 }, 1000)

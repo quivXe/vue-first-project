@@ -26,6 +26,7 @@ const managersLoaded = ref(false);
 const route = useRoute();
 
 const initializeManagers = async () => {
+  // todo: if in collab, check if it exists, if no, redirect.
   const collaborating = route.name === "TaskCollaboration";
   const collabName = collaborating ? route.params.collaborationName : null;
   indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");

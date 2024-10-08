@@ -2,6 +2,8 @@
 import { useRoute, useRouter } from 'vue-router';
 import { ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
+import { fetchPost } from '../utils/fetchUtil';
+import Debounce from '../utils/debounce'
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
 
@@ -10,6 +12,9 @@ const password = ref('');
 const additionalInfo = ref("");
 const tempOutput = ref("");
 
+const resetAdditionalInfoDebounce = new Debounce(() => {
+    additionalInfo.value = "";
+}, 5000);
 
 const route = useRoute();
 const router = useRouter();
@@ -44,55 +49,41 @@ function filterName() {
     if (!regex.test(collabName.value)) {
         collabName.value = collabName.value.replaceAll(/[^a-zA-Z0-9_\-=@,.;]/g, '');
         additionalInfo.value = "Invalid character";
-        setTimeout(() => { additionalInfo.value = "" }, 2000);
+        resetAdditionalInfoDebounce.run();
     }
+}
+
+function handleFetchError(error) {
+    // TODO: handle more errors
+    
+    let output;
+    switch(error.message) {
+        case 'collaboration with name already exists':
+            output = "This collaboration name is already taken.";
+            break
+        default:
+            output = "An unexpected error happened.";
+    };
+    additionalInfo.value = output;
+    resetAdditionalInfoDebounce.run();
 }
 
 function onSubmit() {
     
     filterName();
     let name = collabName.value.trim();
-    const payload = JSON.stringify({
+    const payload = {
         'name': name,
         'password': password.value.trim()
-    })
-    // TODO: check if name is in collab_tasks idb before checking it on server
-    fetch("/api/collaborations/create", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload
-    })
-    .then(async res => {
-        if (!res.ok) {
-            return { name: collabName.value.trim() } // temp
-            
-            // collaboration name is taken
-            if (res.status === 400) {
-                additionalInfo.value = "Name is taken";
-                setTimeout(() => { additionalInfo.value = "" }, 2000);
-            } 
-            
-            else {
-                try {
-                    const errorData = await res.json();
-                    throw new Error(errorData.error || "Something went wrong");
-                }
-                catch {
-                    // return {'name': name} // temp
-                   throw new Error("Cannot connect to server"); 
-                }
-            }
-        }
-        else {
-            return res.json();
-        }
-    })
-    .then(async data => {
-        // everything's right
+    };
 
+    // TODO: check if name is in collab_tasks idb before checking it on server
+
+    fetchPost("/api/collaborations/create", payload)
+    .then(async data => {
         const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
-        async function exportTask(parentId, newParentId) {
+        const exportTask = async (parentId, newParentId) => {
             const parent = await localIndexedDBManager.getObjectById(parentId);
             delete parent.id;
             parent.collabName = data.name;
@@ -103,24 +94,17 @@ function onSubmit() {
             const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
                 return Promise.all( children.map(child => exportTask( child.id, newParent.id )) );
             });
-            return Promise.all([ addChildrenPromise ]);
-        } 
-        
-        // export whole task to collab store
-        exportTask(taskIdFromRoute, -1)
-        .then(() => {
-            tempOutput.value = JSON.stringify(data);
-            additionalInfo.value = "Collaboration created!"
-        })
-        .catch(error => {
-            throw new Error("Something went wrong while saving", error);
-        })
+            return addChildrenPromise;
+        }; 
 
+        // export whole task to collab store
+        await exportTask(taskIdFromRoute, -1);
+    
+        additionalInfo.value = "Collaboration created!";    
+        setTimeout(() => router.push("/collaborations"), 2000);
     })
     .catch(error => {
-        console.log("Error:", error.message);
-        additionalInfo.value = error.message;
-
+        handleFetchError(error);
     })
     
 }

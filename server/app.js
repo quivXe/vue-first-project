@@ -24,10 +24,6 @@ app.use(express.static(path.join(__dirname, '../client/dist')));
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/operations', operationRoutes);
 
-app.get('/test', (req, res) => {
-    res.sendFile(path.join(__dirname, "./test/index.html"));
-})
-
 app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 })

@@ -35,7 +35,7 @@ exports.getOperationsForCollab = async (req, res) => {
     }
     
     const operations = await Operation.findAll({ where: conditions });
-    res.json(operations);
+    res.status(200).json(operations);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
