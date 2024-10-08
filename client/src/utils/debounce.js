@@ -15,20 +15,35 @@ class Debounce {
         this.stop = this.stop.bind(this);
         this.now = this.now.bind(this);
     }
-    /** Trigger callback after given ms milliseconds */
-    run() {
-        this.stop();
-        this.timeoutId = setTimeout(this.callback, this.ms);
+    /**
+     * Trigger the callback after the given delay.
+     * Any arguments passed to `run` will be forwarded to the callback.
+     *
+     * @param {...any} args - Arguments to pass to the callback when it's invoked.
+     */
+
+    run(...args) {
+        this.stop(...args);
+        this.timeoutId = setTimeout(() => { this.callback(...args) }, this.ms);
     }
-    /** Stops timeout */
+
+    /**
+     * Stops the currently running timeout.
+     */
     stop() {
         if (this.timeoutId !== null) clearTimeout(this.timeoutId);
     }
-    /** Trigger callback immediately if queried */
-    now() {
+
+    /**
+     * Trigger the callback immediately and clear any pending timeout.
+     * Any arguments passed to `now` will be forwarded to the callback.
+     *
+     * @param {...any} args - Arguments to pass to the callback when it's invoked.
+     */
+    now(...args) {
         if (this.timeoutId !== null) {
             clearTimeout(this.timeoutId);
-            this.callback();
+            this.callback(...args);
         }
     }
 }

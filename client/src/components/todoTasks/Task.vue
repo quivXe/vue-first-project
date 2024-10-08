@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, nextTick } from 'vue'
+import Debounce from '../../utils/debounce';
 
 const CLICK_DRAG_DELAY_DELTA = 350;
 
@@ -30,8 +31,12 @@ const dragging = ref(props._dragging); // ensure that even if item is rerendered
 const inputTaskValue = ref("");
 const inputTaskRef = ref(null);
 
+const debouncedStartDragging = new Debounce((task) => {
+    dragging.value = true;
+    emit("startDragging", task);
+}, CLICK_DRAG_DELAY_DELTA);
+
 var taskPressed = false;
-var timeoutId = null;
 
 onMounted(() => {
     if (props.createNew) {
@@ -54,25 +59,19 @@ watch(() => props.changeName, (changeName) => {
 
 function onTaskPressed(task) {
     taskPressed = true;
-
-    timeoutId = setTimeout(() => {
-        dragging.value = true;
-        emit("startDragging", task)
-    }, CLICK_DRAG_DELAY_DELTA)
+    debouncedStartDragging.run(task);
 }
 function releaseTask(task) {
     taskPressed = false;
 
     // timeout hasnt fired yet - counts as click, not drag
     if (!dragging.value) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
+        debouncedStartDragging.stop();
         emit('taskClicked', task);
     } 
 
     // dragging started
     else {
-        timeoutId = null;
         emit('stopDragging', task);
     }
     dragging.value = false;

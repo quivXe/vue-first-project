@@ -27,7 +27,7 @@ const managersLoaded = ref(false);
 const route = useRoute();
 
 const initializeManagers = async () => {
-  // todo: if in collab, check if it exists, if no, redirect.
+  // todo: if in collab, check if it exists if no, pusher ask for whole version
   try {
     const collaborating = route.name === "TaskCollaboration";
     const collabName = collaborating ? route.params.collaborationName : null;
@@ -51,7 +51,7 @@ watch(() => route.name, (newName, oldName) => {
   }
 })
 
-const debouncedMouseUp = new Debounce(() => uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle, 200);
+const debouncedMouseUp = new Debounce(() => uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle, 100);
 onMounted(async () => {
   await initializeManagers(route);
 
