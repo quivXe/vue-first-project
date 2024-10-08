@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, onMounted, nextTick } from 'vue'
 
-const CLICK_DRAG_DELAY_DELTA = 200;
+const CLICK_DRAG_DELAY_DELTA = 350;
 
 const props = defineProps({
     task: Object,

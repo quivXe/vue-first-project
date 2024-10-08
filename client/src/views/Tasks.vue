@@ -16,6 +16,7 @@ import {
 import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
+import Debounce from '../utils/debounce.js';
 
 let indexedDBManager = null;
 let taskManager = null;
@@ -27,14 +28,19 @@ const route = useRoute();
 
 const initializeManagers = async () => {
   // todo: if in collab, check if it exists, if no, redirect.
-  const collaborating = route.name === "TaskCollaboration";
-  const collabName = collaborating ? route.params.collaborationName : null;
-  indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
-  taskManager = new TaskManager(indexedDBManager, collabName);
-  await taskManager.init();
-  uiManager.init(taskManager);
+  try {
+    const collaborating = route.name === "TaskCollaboration";
+    const collabName = collaborating ? route.params.collaborationName : null;
+    indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
+    taskManager = new TaskManager(indexedDBManager, collabName);
+    await taskManager.init();
+    uiManager.init(taskManager);
 
-  managersLoaded.value = true;
+    managersLoaded.value = true;
+  }
+  catch(error) {
+    console.log("Error during loading managers:", error);
+  }
 }
 
 // check for route change ( from collab to local cuz it didnt refresh managers )
@@ -45,10 +51,11 @@ watch(() => route.name, (newName, oldName) => {
   }
 })
 
+const debouncedMouseUp = new Debounce(() => uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle, 200);
 onMounted(async () => {
   await initializeManagers(route);
 
-  document.addEventListener('mouseup', () => { uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle });
+  document.addEventListener('mouseup', debouncedMouseUp.run);
 })
 </script>
 <template>

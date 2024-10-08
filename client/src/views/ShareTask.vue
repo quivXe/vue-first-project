@@ -12,9 +12,12 @@ const password = ref('');
 const additionalInfo = ref("");
 const tempOutput = ref("");
 
-const resetAdditionalInfoDebounce = new Debounce(() => {
+const debouncedResetAdditionalInfo = new Debounce(() => {
     additionalInfo.value = "";
-}, 5000);
+}, 4500);
+const debouncedFilterName = new Debounce(() => {
+    filterName();
+}, 80);
 
 const route = useRoute();
 const router = useRouter();
@@ -37,6 +40,7 @@ const taskName = ref("");
 
 function filterName() {
 
+    console.log("lol");
     // Allowed characters: letters, numbers, _ - = @ , . ;
     // Maximum length: 156
 
@@ -49,13 +53,13 @@ function filterName() {
     if (!regex.test(collabName.value)) {
         collabName.value = collabName.value.replaceAll(/[^a-zA-Z0-9_\-=@,.;]/g, '');
         additionalInfo.value = "Invalid character";
-        resetAdditionalInfoDebounce.run();
+        debouncedResetAdditionalInfo.run();
     }
 }
 
 function handleFetchError(error) {
     // TODO: handle more errors
-    
+
     let output;
     switch(error.message) {
         case 'collaboration with name already exists':
@@ -65,7 +69,7 @@ function handleFetchError(error) {
             output = "An unexpected error happened.";
     };
     additionalInfo.value = output;
-    resetAdditionalInfoDebounce.run();
+    debouncedResetAdditionalInfo.run();
 }
 
 function onSubmit() {
@@ -130,7 +134,7 @@ function onSubmit() {
         <form id="share-form" @submit.prevent="onSubmit">
             <div class="field">
                 <label for="collab-name">Collaboration's name</label>
-                <input type="text" id="collab-name" v-model="collabName" @input=filterName required>
+                <input type="text" id="collab-name" v-model="collabName" @input="debouncedFilterName.run" required>
             </div>
             <div class="field">
                 <label for="password">Password</label>

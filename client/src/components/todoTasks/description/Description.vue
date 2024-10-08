@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import Debounce from '..../utils/delay';
+import Debounce from '../../../utils/debounce';
 
 marked.use({
     breaks: true
