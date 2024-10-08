@@ -1,10 +1,21 @@
-import { ref } from 'vue'
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import TaskManager from './TaskManager';
 
+/**
+ * Manages the UI interactions and states for task management.
+ *
+ * @class UIManager
+ */
 class UIManager {
+  /**
+   * Creates an instance of UIManager.
+   *
+   * @constructor
+   * @param {TaskManager} taskManager - An instance of TaskManager to manage tasks.
+   */
   constructor(taskManager) {
     this.taskManager = taskManager;
-
     this.router = useRouter();
 
     this._parentTree = ref([]);
@@ -13,11 +24,11 @@ class UIManager {
     this._showOptions = ref(false);
     this._changingTaskName = ref(null);
     this._showDescription = ref(false);
-    this.optionsMenuData = {}
+
+    this.optionsMenuData = {};
     this.draggedTask = null;
 
     // Bind methods to the instance
-    // Ensure that methods always refer to the class instance (even when passed as callbacks)
     this.taskClicked = this.taskClicked.bind(this);
     this.deleteTaskClicked = this.deleteTaskClicked.bind(this);
     this.changeTaskName = this.changeTaskName.bind(this);
@@ -35,112 +46,140 @@ class UIManager {
     this.selectParentInTree = this.selectParentInTree.bind(this);
   }
 
+  /**
+   * Initializes the UIManager by updating current tasks.
+   *
+   * @param {TaskManager} taskManager - An instance of TaskManager.
+   */
   init(taskManager) {
     this.taskManager = taskManager;
     this._currentTasks = ref(this.taskManager.currentTasks);
   }
 
-  get currentTasks() {
-    return this._currentTasks.value;
-  }
+  get currentTasks() { return this._currentTasks.value; }
 
-  get parentTree() {
-    return this._parentTree.value;
-  }
+  get parentTree() { return this._parentTree.value; }
 
-  get mouseReleasedToggle() {
-    return this._mouseReleasedToggle.value;
-  }
-  set mouseReleasedToggle(v) {
-    this._mouseReleasedToggle.value = v;
-  }
+  get mouseReleasedToggle() { return this._mouseReleasedToggle.value; }
+  set mouseReleasedToggle(v) { this._mouseReleasedToggle.value = v; }
 
-  get creatingNewTask() {
-    return this._creatingNewTask.value;
-  }
-  set creatingNewTask(v) {
-    this._creatingNewTask.value = v;
-  }
+  get creatingNewTask() { return this._creatingNewTask.value; }
+  set creatingNewTask(v) { this._creatingNewTask.value = v; }
 
-  get changingTaskName() {
-    return this._changingTaskName.value;
-  }
-  set changingTaskName(v) {
-    this._changingTaskName.value = v;
-  }
+  get changingTaskName() { return this._changingTaskName.value; }
+  set changingTaskName(v) { this._changingTaskName.value = v; }
 
-  get showOptions() {
-    return this._showOptions.value
-  }
-  set showOptions(v) {
-    this._showOptions.value = v;
-  }
+  get showOptions() { return this._showOptions.value; }
+  set showOptions(v) { this._showOptions.value = v; }
 
-  get showDescription() {
-    return this._showDescription.value;
-  }
-  set showDescription(v) {
-    this._showDescription.value = v;
-  }
+  get showDescription() { return this._showDescription.value; }
+  set showDescription(v) { this._showDescription.value = v; }
 
-  get TASK_STATUSES() {
-    return this.taskManager.TASK_STATUSES;
-  }
+  get TASK_STATUSES() { return this.taskManager.TASK_STATUSES; }
 
+  /**
+   * Handles the event when a task is clicked.
+   *
+   * @param {Object} task - The task object that was clicked.
+   */
   taskClicked(task) {
     this.pushParent(task);
   }
 
+  /**
+   * Handles the event when a task delete button is clicked.
+   *
+   * @param {Object} task - The task object to be deleted.
+   */
   deleteTaskClicked(task) {
     this.taskManager.removeTask(task);
   }
 
+  /**
+   * Handles the event for changing a task's name when the user exits the name input.
+   *
+   * @param {Object} task - The task object to be updated.
+   * @param {String} newName - The new name for the task.
+   */
   changeTaskName(task, newName) {
     this.taskManager.changeTaskName(task, newName);
     this.changingTaskName = null;
   }
 
+  /**
+   * Handles the event for updating a task's description.
+   *
+   * @param {Object} task - The task object to be updated.
+   * @param {String} newDescription - The new description for the task.
+   */
   updateDescription(task, newDescription) {
     this.taskManager.updateDescription(task, newDescription);
   }
+
+  /** 
+   * Handles the click event on the create task button.
+   */
   addTaskClicked() {
     this.creatingNewTask = true;
   }
 
+  /**
+   * Handles the blur event when the user exits the task name input.
+   *
+   * @param {String} value - The name of the new task to be added.
+   */
   newTaskBlur(value) {
     let parentId = this.getCurrentParent(true);
     this.taskManager.addTask(value, parentId);
     this.creatingNewTask = false;
   }
 
+  /**
+   * Handles mouse over a task element event. Updates flexIndex 
+   * whenever the dragged task changes its location.
+   *
+   * @param {Object} taskOver - The task object that the dragged task is over.
+   */
   mouseOverTask(taskOver) {
     if (this.draggedTask === null) return;
     if (this.draggedTask.id === taskOver.id) return;
     this.draggedTask.flexIndex = this.draggedTask.flexIndex > taskOver.flexIndex ? 
       taskOver.flexIndex - 1 :
       taskOver.flexIndex + 1;
-    }
-  
+  }
+
+  /**
+   * Handles mouse over column event. Updates the status of the dragged task.
+   *
+   * @param {number} columnStatusNumber - The new status number for the dragged task.
+   */
   mouseOverColumn(columnStatusNumber) {
     if (this.draggedTask === null) return;
     this.draggedTask.status = columnStatusNumber;
   }
 
+  /**
+   * Handles the click event on the options button in a task.
+   *
+   * @param {Object} task - The task object for which options are shown.
+   */
   taskOptionsClicked(task) {
     this.showOptions = true;
     this.optionsMenuData = {
       header: "OPTIONS",
       options: [
-        { 
+        {
           name: "Delete", callback: () => {
             this.showOptions = false;
             this.taskManager.removeTask(task);
-        }},
-        { 
+          }
+        },
+        {
           name: "Change name", callback: () => {
             this.changingTaskName = task;
             this.showOptions = false;
-        }},
+          }
+        },
         {
           name: "Share", callback: () => {
             this.router.push({ name: 'ShareTask', params: { taskId: task.id } });
@@ -150,40 +189,65 @@ class UIManager {
     };
   }
 
+  /**
+   * Handles the event when a task starts being dragged.
+   *
+   * @param {Object} task - The task object that is being dragged.
+   */
   startDraggingTaskTriggered(task) {
     this.draggedTask = this.currentTasks.find(t => t.id == task.id);
   }
+
+  /**
+   * Handles the event when dragging stops.
+   *
+   * @param {Object} task - The task object that was dragged.
+   */
   stopDraggingTaskTriggered(task) {
     this.draggedTask = null;
 
-    // update flex indexes
+    // Update flex indexes
     let _currentTasks = this.currentTasks;
     _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
     for (let i = 0; i < _currentTasks.length; i++) {
-      _currentTasks[i].flexIndex = (i+1) * 2;
+      _currentTasks[i].flexIndex = (i + 1) * 2;
     }
 
     this.taskManager.updateStatus(task, task.status);
   }
 
-  getCurrentParent(getId=false) {
+  /**
+   * Returns the task object of the current parent.
+   *
+   * @param {boolean} [getId=false] - Whether to return the parent's ID instead of the task object.
+   * @returns {Object|null} The current parent task object, or null if none exists.
+   */
+  getCurrentParent(getId = false) {
     let currentParent = this._parentTree.value[this._parentTree.value.length - 1];
     if (getId) {
       return currentParent === undefined ? 
-        -1 :
-        currentParent.id;
+        -1 : currentParent.id;
     } else {
-      return currentParent === undefined ?
-        null :
-        currentParent
+      return currentParent === undefined ? 
+        null : currentParent;
     }
   }
 
+  /**
+   * Pushes the provided task to the parent tree.
+   *
+   * @param {Object} task - The task object to be pushed to the parent tree.
+   */
   pushParent(task) {
     this._parentTree.value.push(task);
     this.taskManager.updateCurrentTasks(task.id);
   }
 
+  /**
+   * Pops the parent from the parent tree and returns it.
+   *
+   * @returns {Object|null} The task object that was popped, or null if none exists.
+   */
   popParent() {
     let parentPopped = this._parentTree.value.pop();
     let newParentId = this.getCurrentParent(true);
@@ -191,20 +255,28 @@ class UIManager {
     return parentPopped;
   }
 
+  /**
+   * Handles the event when a user selects a provided parent from the parent tree.
+   *
+   * @param {Object} task - The task object to be selected as a parent.
+   */
   selectParentInTree(task) {
     let currentParentId = this.getCurrentParent(true);
 
-    if (task === null) this._parentTree.value = []; // home is clicked
-    else {
+    if (task === null) {
+      this._parentTree.value = []; // Home is clicked
+    } else {
       while (task.id !== this.getCurrentParent(true)) {
         this.parentTree.pop();
       }
     }
 
-    // update current tasks if needed
+    // Update current tasks if needed
     let newParentId = this.getCurrentParent(true);
-    if (currentParentId !== newParentId) this.taskManager.updateCurrentTasks(newParentId);
+    if (currentParentId !== newParentId) {
+      this.taskManager.updateCurrentTasks(newParentId);
+    }
   }
 }
 
-export default UIManager
+export default UIManager;
