@@ -2,6 +2,21 @@ import { toRaw, ref } from 'vue';
 import IndexedDBManager from './IndexedDBManager';
 
 /**
+ * Task object, stored in indexedDB, and displayed by UIManager
+ *
+ * @typedef {Object} Task
+ * 
+ * @param {String} name
+ * @param {Int} flexIndex
+ * @param {Int} status - Has to be value from TaskManager.TASK_STATUSES
+ * @param {Int} parentId - Id of task that is one tier above
+ * @param {String} description
+ * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
+ * @param {number} [id=null] - Task id, autoincremented
+ */
+
+
+/**
  * Manages tasks and serves as a bridge between the UI and IndexedDB.
  * It interacts with IndexedDBManager to perform CRUD operations on tasks.
  *
@@ -13,7 +28,7 @@ class TaskManager {
    *
    * @constructor
    * @param {IndexedDBManager} indexedDBManager - An instance of IndexedDBManager to manage task storage.
-   * @param {String|null} [collabName=null] - The name of the collaborator (if any). Defaults to null.
+   * @param {String|null} [collabName=null] - The name of the collaboration (if any). Defaults to null.
    */
   constructor(indexedDBManager, collabName=null) {
     this.TASK_STATUSES = {
@@ -121,7 +136,7 @@ class TaskManager {
    * Removes a task from indexedDBManager. If inCurrentTasks is true, updates currentTasks accordingly.
    *
    * @async
-   * @param {Object} task - The task object to be removed.
+   * @param {Task} task - The task object to be removed.
    * @param {boolean} [inCurrentTasks=true] - Whether to update currentTasks after removal. Defaults to true.
    * @returns {Promise<void>} 
    */
@@ -156,7 +171,7 @@ class TaskManager {
    * Changes the name of a task in the indexedDBManager and current tasks.
    *
    * @async
-   * @param {Object} task - The task object to be updated.
+   * @param {Task} task - The task object to be updated.
    * @param {String} newName - The new name for the task.
    * @returns {Promise<void>}
    */
@@ -179,7 +194,7 @@ class TaskManager {
    * Updates the description of a task in the indexedDBManager and current tasks.
    *
    * @async
-   * @param {Object} task - The task object to be updated.
+   * @param {Task} task - The task object to be updated.
    * @param {String} newDescription - The new description for the task.
    * @returns {Promise<void>}
    */
@@ -202,7 +217,7 @@ class TaskManager {
    * Updates the status of a task in the indexedDBManager and current tasks.
    *
    * @async
-   * @param {Object} task - The task object to be updated.
+   * @param {Task} task - The task object to be updated.
    * @param {String} newStatus - The new status for the task. Should be one of the TASK_STATUSES.
    * @returns {Promise<void>}
    */

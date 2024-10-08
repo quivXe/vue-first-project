@@ -3,6 +3,20 @@ import { useRouter } from 'vue-router';
 import TaskManager from './TaskManager';
 
 /**
+ * Task object, stored in indexedDB, and displayed by UIManager
+ *
+ * @typedef {Object} Task
+ * 
+ * @param {String} name
+ * @param {Int} flexIndex
+ * @param {Int} status - Has to be value from TaskManager.TASK_STATUSES
+ * @param {Int} parentId - Id of task that is one tier above
+ * @param {String} description
+ * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
+ * @param {number} [id=null] - Task id, autoincremented
+ */
+
+/**
  * Manages the UI interactions and states for task management.
  *
  * @class UIManager
@@ -80,7 +94,7 @@ class UIManager {
   /**
    * Handles the event when a task is clicked.
    *
-   * @param {Object} task - The task object that was clicked.
+   * @param {Task} task - The task object that was clicked.
    */
   taskClicked(task) {
     this.pushParent(task);
@@ -89,7 +103,7 @@ class UIManager {
   /**
    * Handles the event when a task delete button is clicked.
    *
-   * @param {Object} task - The task object to be deleted.
+   * @param {Task} task - The task object to be deleted.
    */
   deleteTaskClicked(task) {
     this.taskManager.removeTask(task);
@@ -98,7 +112,7 @@ class UIManager {
   /**
    * Handles the event for changing a task's name when the user exits the name input.
    *
-   * @param {Object} task - The task object to be updated.
+   * @param {Task} task - The task object to be updated.
    * @param {String} newName - The new name for the task.
    */
   changeTaskName(task, newName) {
@@ -109,7 +123,7 @@ class UIManager {
   /**
    * Handles the event for updating a task's description.
    *
-   * @param {Object} task - The task object to be updated.
+   * @param {Task} task - The task object to be updated.
    * @param {String} newDescription - The new description for the task.
    */
   updateDescription(task, newDescription) {
@@ -138,7 +152,7 @@ class UIManager {
    * Handles mouse over a task element event. Updates flexIndex 
    * whenever the dragged task changes its location.
    *
-   * @param {Object} taskOver - The task object that the dragged task is over.
+   * @param {Task} taskOver - The task object that the dragged task is over.
    */
   mouseOverTask(taskOver) {
     if (this.draggedTask === null) return;
@@ -161,7 +175,7 @@ class UIManager {
   /**
    * Handles the click event on the options button in a task.
    *
-   * @param {Object} task - The task object for which options are shown.
+   * @param {Task} task - The task object for which options are shown.
    */
   taskOptionsClicked(task) {
     this.showOptions = true;
@@ -192,7 +206,7 @@ class UIManager {
   /**
    * Handles the event when a task starts being dragged.
    *
-   * @param {Object} task - The task object that is being dragged.
+   * @param {Task} task - The task object that is being dragged.
    */
   startDraggingTaskTriggered(task) {
     this.draggedTask = this.currentTasks.find(t => t.id == task.id);
@@ -201,7 +215,7 @@ class UIManager {
   /**
    * Handles the event when dragging stops.
    *
-   * @param {Object} task - The task object that was dragged.
+   * @param {Task} task - The task object that was dragged.
    */
   stopDraggingTaskTriggered(task) {
     this.draggedTask = null;
@@ -236,7 +250,7 @@ class UIManager {
   /**
    * Pushes the provided task to the parent tree.
    *
-   * @param {Object} task - The task object to be pushed to the parent tree.
+   * @param {Task} task - The task object to be pushed to the parent tree.
    */
   pushParent(task) {
     this._parentTree.value.push(task);
@@ -246,7 +260,7 @@ class UIManager {
   /**
    * Pops the parent from the parent tree and returns it.
    *
-   * @returns {Object|null} The task object that was popped, or null if none exists.
+   * @returns {Task|null} The task object that was popped, or null if none exists.
    */
   popParent() {
     let parentPopped = this._parentTree.value.pop();
@@ -258,7 +272,7 @@ class UIManager {
   /**
    * Handles the event when a user selects a provided parent from the parent tree.
    *
-   * @param {Object} task - The task object to be selected as a parent.
+   * @param {Task} task - The task object to be selected as a parent.
    */
   selectParentInTree(task) {
     let currentParentId = this.getCurrentParent(true);
