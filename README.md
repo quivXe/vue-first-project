@@ -20,7 +20,7 @@ Using: VUE 3, Node.js, Pusher, SASS
 - 201: `{ name: createdCollabName }`
 - 400: `{ error: 'A collaboration with this name already exists' }`
 - 422:
-  - `{ error: 'Invalid characters in name. Only letters, numbers, and _ - = @ , . ; are allowed.' }`
+  - `{ error: 'Invalid characters in name. Only letters, numbers, and _ - = @ , . ; are allowed' }`
   - `{ error: 'Name length cannot be longer than 156' }`
 
 ### /api/collaborations/join
@@ -33,7 +33,7 @@ Using: VUE 3, Node.js, Pusher, SASS
 #### RESPONSE
 
 - 201: `{ name: collabName }`
-- 400: `{ error: 'Collaboration not found or password incorrect.' }`
+- 400: `{ error: 'Collaboration not found or password incorrect' }`
 
 ## OPERATIONS
 

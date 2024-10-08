@@ -1,50 +1,53 @@
 <script setup>
-import { ref } from 'vue';
+import { handleError, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { fetchPost } from '../utils/fetchUtil';
+import Debounce from '../utils/debounce';
 
 const route = useRoute();
 const router = useRouter();
+
+const debouncedResetAdditionalInfo = new Debounce(() => additionalInfo.value = '', 4500);
 
 const collabName = ref(route.params.collaborationName || '');
 const password = ref('');
 const additionalInfo = ref('');
 
+function handleFetchError(error) {
+    if (error.type === "not-json-response") {
+        output = error.message;
+    }
+    else if (error.response && error.response.status) {
+        switch (error.response.status) {
+            case 400:
+                output = "Wrong collaboration's name or password.";
+                break;
+            default:
+                output = "An unexpected error happened.";
+                break;
+        }
+    } else {
+        output = "Network error. Please check your connection."
+    }
+    additionalInfo.value = output;
+    debouncedResetAdditionalInfo.run();
+}
+
 function onSubmit() {
-    const payload = JSON.stringify({
+    const payload = {
         name: collabName.value,
         password: password.value
-    });
+    };
 
-    fetch('/api/collaborations/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload
-    })
-    .then(res => {
-        if (!res.ok) {
-            return {name: "magod"} // temp
-            if (res.status === 400) {
-                // collaboration name or password incorrect
-                throw new Error("Collaboration name or password are incorrect");
-
-            } else {
-                throw new Error("Something went wrong"); 
-            }
-        }
-        else {
-            return res.json();
-        }
-    })
+    fetchPost('/api/collaborations/join', payload)
     .then(data => {
-        // everything's right
-
-        additionalInfo.value = "Successfully joined collaboration! " + data.name;
+        collabName.value = '';
+        password.value = '';
         router.push(`/collaborations/${data.name}`);
     })
     .catch(error => {
-        console.log(error);
-        additionalInfo.value = error.message;
-    })
+        handleFetchError(error);
+    });
 }
 
 </script>

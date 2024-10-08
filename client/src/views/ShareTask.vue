@@ -1,11 +1,12 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { handleError, ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
 import { fetchPost } from '../utils/fetchUtil';
 import Debounce from '../utils/debounce'
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
+const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
 const collabName = ref('');
 const password = ref('');
@@ -40,7 +41,6 @@ const taskName = ref("");
 
 function filterName() {
 
-    console.log("lol");
     // Allowed characters: letters, numbers, _ - = @ , . ;
     // Maximum length: 156
 
@@ -61,31 +61,48 @@ function handleFetchError(error) {
     // TODO: handle more errors
 
     let output;
-    switch(error.message) {
-        case 'collaboration with name already exists':
-            output = "This collaboration name is already taken.";
-            break
-        default:
-            output = "An unexpected error happened.";
-    };
+    if (error.response && error.response.status) {
+        switch(error.response.status) {
+            case 400:
+                output = "This collaboration name is already taken.";
+                break
+            case 422:
+                output = "Invalid collaboration name."
+            default:
+                output = "An unexpected error happened.";
+                break;
+        };
+    } else {
+        output = "Network error. Please check your connection."
+    }
     additionalInfo.value = output;
     debouncedResetAdditionalInfo.run();
 }
 
-function onSubmit() {
-    
+async function validateAndGetPayload() {
     filterName();
     let name = collabName.value.trim();
-    const payload = {
-        'name': name,
-        'password': password.value.trim()
-    };
+    const tasksWithGivenCollabName = await collabIndexedDBManager.getTasksByCollabName(name);
+    
+    if (tasksWithGivenCollabName.length > 0) {
+        return false;
+    }
 
-    // TODO: check if name is in collab_tasks idb before checking it on server
+    return {
+        name: name,
+        password: password.value.trim()
+    };
+}
+async function onSubmit() {
+
+    const payload = await validateAndGetPayload();
+    if (!payload) {
+        handleFetchError(new Error("collaboration with name already exists"));
+        return;
+    }
 
     fetchPost("/api/collaborations/create", payload)
     .then(async data => {
-        const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
         const exportTask = async (parentId, newParentId) => {
             const parent = await localIndexedDBManager.getObjectById(parentId);
@@ -120,7 +137,7 @@ function onSubmit() {
 - if so, get collab name and password from form DONE
 - send collab name and password to server DONE
 - handle response (name taken or unexpected error) DONE
-- if everything is right, connect on server to channel, redirect to collaborations XX
+- if everything is right, connect on server to channel, redirect to collaborations DONE
 - add some indicator that this task is shared XX
 
 */

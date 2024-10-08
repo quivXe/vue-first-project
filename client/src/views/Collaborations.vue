@@ -2,12 +2,9 @@
 import IndexedDBManager from '../services/IndexedDBManager';
 import { ref } from 'vue';
 
-const indexedDBManager = new IndexedDBManager("TODO_APP", "collab_tasks");
-
 const tasks = ref([]);
-// (async () => {
-//     tasks.value = await indexedDBManager.getTasksByParentId(-1);
-// })();
+
+const indexedDBManager = new IndexedDBManager("TODO_APP", "collab_tasks");
 
 indexedDBManager.getTasksByParentId(-1)
 .then(res => {

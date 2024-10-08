@@ -13,7 +13,7 @@ exports.createCollaboration = async (req, res) => {
 
     // Validate the 'name' and 'password' fields for illegal characters
     if (!allowedCharacters.test(name) || !allowedCharacters.test(password)) {
-      return res.status(422).json({ error: 'Invalid characters in name or password. Only letters, numbers, and _ - = @ , . ; are allowed.' });
+      return res.status(422).json({ error: 'Invalid characters in name or password. Only letters, numbers, and _ - = @ , . ; are allowed' });
     }
 
     // Validate length
@@ -50,7 +50,7 @@ exports.joinCollaboration = async (req, res) => {
       isMatch = await comparePasswords(password, collab.password);
     }
     if (!collab || !isMatch) {
-      return res.status(400).json({ error: 'Collaboration not found or password incorrect.' });
+      return res.status(400).json({ error: 'Collaboration not found or password incorrect' });
     }
 
     res.status(201).json({ name: name });
