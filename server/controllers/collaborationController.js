@@ -2,6 +2,7 @@
 const { compare } = require('bcrypt');
 const { Collaboration } = require('../models');
 const { hashPassword, comparePasswords } = require("../utils/hashUtils");
+require('dotenv').config();
 
 /**
  * Create a new collaboration.
@@ -15,7 +16,7 @@ const { hashPassword, comparePasswords } = require("../utils/hashUtils");
  * 
  * 201 - Request successful, sends {name: {collaboration.name}}.
  * 
- * 400 - Collaboration with specified name already exists
+ * 409 - Collaboration with specified name already exists
  * 
  * 422 - Name or password contains invalid character or name is too long
  * 
@@ -27,7 +28,8 @@ const { hashPassword, comparePasswords } = require("../utils/hashUtils");
  * @param {string} req.body.name - The name of the collaboration.
  * @param {string} req.body.password - The password for the collaboration.
  * @param {Object} res - The response object used to send responses to the client.
- * @param {number} res.status - 201: sends collaboration {name}; 422: name or password contains invalid character or if the name is too long; 400: collaboration already exists; 500: external error
+ * @param {Function} res.status - A function to set the HTTP status code for the response.
+ * @returns {Promise<void>} Returns a promise that resolves when the response is sent.
  */
 exports.createCollaboration = async (req, res) => {
   const { name, password } = req.body;
@@ -50,7 +52,7 @@ exports.createCollaboration = async (req, res) => {
     // Check if the collaboration with the provided name already exists
     const existingCollab = await Collaboration.findOne({ where: { name } });
     if (existingCollab) {
-      res.status(400).json({ error: 'A collaboration with this name already exists' });
+      res.status(409).json({ error: 'A collaboration with this name already exists' });
       return;
     }
 
@@ -74,8 +76,15 @@ exports.createCollaboration = async (req, res) => {
  * and validates the provided password against the stored password. 
  * If validation is successful, it allows the user to join the collaboration.
  * 
- * res.status 400 - If the collaboration is not found or if the password is incorrect.
- * res.status 500 - If an internal error occurs while joining the collaboration.
+ * Handled response status codes:
+ * 
+ * 200 - Request success, session set.
+ * 
+ * 400 - Invalid request body.
+ * 
+ * 401 - Name or password incorrect.
+ * 
+ * 500 - If an internal error occurs while joining the collaboration.
  *
  * @async
  * @param {Object} req - The request object containing the request data.
@@ -83,11 +92,20 @@ exports.createCollaboration = async (req, res) => {
  * @param {string} req.body.name - The name of the collaboration.
  * @param {string} req.body.password - The password for the collaboration.
  * @param {Object} res - The response object used to send responses to the client.
- * @param {status} res - 201: sends collaboration {name}; 400: collaboration with given name and password is not found; 500: external error
+ * @param {Function} res.status - A function to set the HTTP status code for the response.
+ * @returns {Promise<void>} Returns a promise that resolves when the response is sent.
  */
 exports.joinCollaboration = async (req, res) => {
-  const { name, password } = req.body;
+  
   try {
+
+    const { name, password } = req.body;
+
+    if (!name || !password) {
+      res.status(400).json({ error: 'Invalid request body' });
+      return;
+    }
+
     const collab = await Collaboration.findOne({ where: { name } });
     let isMatch;
 
@@ -95,11 +113,12 @@ exports.joinCollaboration = async (req, res) => {
       isMatch = await comparePasswords(password, collab.password);
     }
     if (!collab || !isMatch) {
-      res.status(400).json({ error: 'Collaboration not found or password incorrect' });
+      res.status(401).json({ error: 'Name or password incorrect' });
       return;
     }
 
-    res.status(201).json({ name: name });
+    req.session.collabName = name;
+    res.status(200).json({ name: name });
     return;
 
   } catch (err) {

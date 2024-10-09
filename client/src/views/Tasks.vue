@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getPusher } from '../services/pusherClient.js';
 
 import {
   AddTaskButton,
@@ -18,19 +19,19 @@ import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
 import Debounce from '../utils/debounce.js';
 
+
+const route = useRoute();
+const collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
+const collaborating = collabName !== null;
+
 let indexedDBManager = null;
 let taskManager = null;
 const uiManager = new UIManager();
 
 const managersLoaded = ref(false);
-
-const route = useRoute();
-
 const initializeManagers = async () => {
   // todo: if in collab, check if it exists if no, pusher ask for whole version
   try {
-    const collaborating = route.name === "TaskCollaboration";
-    const collabName = collaborating ? route.params.collaborationName : null;
     indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
     taskManager = new TaskManager(indexedDBManager, collabName);
     await taskManager.init();
@@ -43,6 +44,19 @@ const initializeManagers = async () => {
   }
 }
 
+if (collaborating) {
+  var pusher = getPusher();
+  let channel = pusher.subscribe(`private-${collabName}`);
+  console.log("halo");
+  channel.bind("pusher:subscription_succeeded", () => {
+    console.log("success");
+  })
+
+  channel.bind("pusher:subscription_error", () => {
+    console.log("error");
+  })
+  console.log("halo2");
+}
 // check for route change ( from collab to local cuz it didnt refresh managers )
 watch(() => route.name, (newName, oldName) => {
   if ( newName !== oldName ) {

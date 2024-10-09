@@ -7,7 +7,9 @@ const path = require('path');
 const { sequelize } = require('./models'); // Import Sequelize instance
 const collaborationRoutes = require('./routes/collaborationRoutes');
 const operationRoutes = require('./routes/operationRoutes');
+const pusherAuthRoute = require('./routes/pusherAuthRoute');
 const createRateLimiter = require('./middlewares/rateLimiter');
+const session = require('./config/session');
 
 const app = express();
 
@@ -16,13 +18,14 @@ const globalLimiter = createRateLimiter(15 * 60 * 1000, 100);
 app.use(globalLimiter);
 app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json()); // Parse JSON request bodies
-
-// Serve static files from client app
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.urlencoded({ extended: false })); // Middleware to parse `application/x-www-form-urlencoded` data
+app.use(session); // session config
+app.use(express.static(path.join(__dirname, '../client/dist'))); // Serve static files from client app
 
 // Routes
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/operations', operationRoutes);
+app.use('/api', pusherAuthRoute);
 
 app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "../client/dist/index.html"));

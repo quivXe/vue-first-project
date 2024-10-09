@@ -35,13 +35,13 @@ class NotJsonResponseError extends Error {
 export async function fetchPost(url, payload) {
     const res = await fetch(url, {
         method: 'POST',
-        header: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
     
     // Check if content type is JSON
     const contentType = res.headers.get("Content-Type");
-    if (!contentType || contentType.includes("application/json")) {
+    if (!contentType || !contentType.includes("application/json")) {
         throw new NotJsonResponseError(res);
     }
 

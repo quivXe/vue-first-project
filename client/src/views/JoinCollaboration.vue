@@ -14,6 +14,9 @@ const password = ref('');
 const additionalInfo = ref('');
 
 function handleFetchError(error) {
+    console.warn(error);
+
+    let output;
     if (error.type === "not-json-response") {
         output = error.message;
     }
@@ -34,16 +37,17 @@ function handleFetchError(error) {
 }
 
 function onSubmit() {
+
     const payload = {
         name: collabName.value,
         password: password.value
     };
-
+    
     fetchPost('/api/collaborations/join', payload)
     .then(data => {
         collabName.value = '';
         password.value = '';
-        router.push(`/collaborations/${data.name}`);
+        // router.push(`/collaborations/${data.name}`);
     })
     .catch(error => {
         handleFetchError(error);
