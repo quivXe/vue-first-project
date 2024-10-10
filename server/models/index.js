@@ -4,7 +4,7 @@ const Collaboration = require('./Collaboration');
 const Operation = require('./Operation');
 
 // Define associations
-Collaboration.hasMany(Operation, { foreignKey: 'collabId', onDelete: 'CASCADE' });
-Operation.belongsTo(Collaboration, { foreignKey: 'collabId' });
+Collaboration.hasMany(Operation, { foreignKey: 'collabName', onDelete: 'CASCADE' });
+Operation.belongsTo(Collaboration, { foreignKey: 'collabName' });
 
 module.exports = { sequelize, Collaboration, Operation };

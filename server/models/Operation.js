@@ -3,16 +3,12 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
 const Operation = sequelize.define('Operation', {
-  collabId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  operationIndex: { 
-    type: DataTypes.INTEGER,
+  collabName: {
+    type: DataTypes.STRING(156),
     allowNull: false,
   },
   operationType: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM('add', 'update', 'delete'),
     allowNull: false,
   },
   details: {

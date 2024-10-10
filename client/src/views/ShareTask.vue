@@ -59,11 +59,11 @@ function filterName() {
 
 function handleFetchError(error) {
     // TODO: handle more errors
-
+    // TODO: ensure response status codes are correct
     let output;
     if (error.response && error.response.status) {
         switch(error.response.status) {
-            case 400:
+            case 401:
                 output = "This collaboration name is already taken.";
                 break
             case 422:
@@ -108,12 +108,12 @@ async function onSubmit() {
             const parent = await localIndexedDBManager.getObjectById(parentId);
             delete parent.id;
             parent.collabName = data.name;
-            parent.newParentId = newParentId;
+            parent.parentId = newParentId;
 
-            const newParent = await collabIndexedDBManager.addObject(parent);
+            const createdParentId = await collabIndexedDBManager.addObject(parent);
 
             const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
-                return Promise.all( children.map(child => exportTask( child.id, newParent.id )) );
+                return Promise.all( children.map(child => exportTask( child.id, createdParentId )) );
             });
             return addChildrenPromise;
         }; 

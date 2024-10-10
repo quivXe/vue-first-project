@@ -1,5 +1,6 @@
 import { toRaw, ref } from 'vue';
 import IndexedDBManager from './IndexedDBManager';
+import CollaborationManager from './CollaborationManager';
 
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
@@ -28,9 +29,9 @@ class TaskManager {
    *
    * @constructor
    * @param {IndexedDBManager} indexedDBManager - An instance of IndexedDBManager to manage task storage.
-   * @param {String|null} [collabName=null] - The name of the collaboration (if any). Defaults to null.
+   * @param {CollaborationManager} [collabManager=null] - An instance of CollaborationManager to send updates on collaboration.
    */
-  constructor(indexedDBManager, collabName=null) {
+  constructor(indexedDBManager, collabManager=null) {
     this.TASK_STATUSES = {
       TODO: 0,
       DOING: 1,
@@ -38,9 +39,10 @@ class TaskManager {
     }
 
     this.indexedDBManager = indexedDBManager;
+    this.collabManager = collabManager;
 
+    this.collaborating = collabManager !== null;
     this.currentTasks = ref([]);
-    this.collabName = collabName;
 
     // Binding methods to ensure correct context
     this.addTask = this.addTask.bind(this);
@@ -66,9 +68,9 @@ class TaskManager {
    * @param {number} parentId - The parent ID for which to fetch tasks.
    */
   async updateCurrentTasks(parentId) {
-    if (parentId === -1 && this.collabName !== null) {
+    if (parentId === -1 && this.collaborating) {
       let tasks = await this.indexedDBManager.getTasksByParentId(parentId);
-      this.currentTasks.value = tasks.filter(t => t.collabName === this.collabName);
+      this.currentTasks.value = tasks.filter(t => t.collabName === this.collabManager.collabName);
     } else {
       this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
     }
@@ -127,6 +129,15 @@ class TaskManager {
       }
     }
 
+    // Send update to collaboration
+    this.collabManager.send(
+      "add",
+      {
+        value: value,
+        parentId: parentId
+      }
+    );
+
     // Update current tasks (if needed)
     task.id = id;
     if (inCurrentTasks) this.currentTasks.value.push(task);
@@ -149,6 +160,7 @@ class TaskManager {
       return Promise.all([removeSelfPromise, childrenPromise]);
     }
 
+    // Remove from indexedDb
     try {
       await removeTaskWithChildren(task, this.indexedDBManager);
     } catch (error) {
@@ -160,6 +172,14 @@ class TaskManager {
         return; // Retry failed
       }
     }
+
+    // Send to collab
+    this.collabManager.send(
+      "delete",
+      {
+        taskId: task.id
+      }
+    );
 
     if (inCurrentTasks) {
       let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
@@ -177,6 +197,8 @@ class TaskManager {
    */
   async changeTaskName(task, newName) {
     task.name = newName;
+
+    // Update indexedDb
     try {
       await this.indexedDBManager.updateObject(toRaw(task));
     } catch (error) {
@@ -188,6 +210,16 @@ class TaskManager {
         return; // Retry failed
       }
     }
+
+    // Send to collab
+    this.collabManager.send(
+      "update",
+      {
+        type: 'name',
+        taskId: task.id,
+        newName: newName
+      }
+    );
   }
 
   /**
@@ -200,6 +232,8 @@ class TaskManager {
    */
   async updateDescription(task, newDescription) {
     task.description = newDescription;
+
+    // Update indexedDb
     try {
       await this.indexedDBManager.updateObject(toRaw(task));
     } catch (error) {
@@ -211,6 +245,16 @@ class TaskManager {
         return; // Retry failed
       }
     }
+
+    // Send to collab
+    this.collabManager.send(
+      "update",
+      {
+        type: "description",
+        taskId: task.id,
+        newDescription: newDescription
+      }
+    )
   }
 
   /**
@@ -223,6 +267,8 @@ class TaskManager {
    */
   async updateStatus(task, newStatus) {
     task.status = newStatus;
+
+    // Update indexedDb
     try {
       await this.indexedDBManager.updateObject(toRaw(task));
     } catch (error) {
@@ -234,6 +280,16 @@ class TaskManager {
         return; // Retry failed
       }
     }
+
+    // Send to collab
+    this.collabManager.send(
+      "update",
+      {
+        type: "status",
+        taskId: task.id,
+        newStatus: newStatus
+      }
+    )
   }
 
   /**

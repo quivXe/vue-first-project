@@ -4,12 +4,13 @@ const sequelize = require('../config/db');
 
 const Collaboration = sequelize.define('Collaboration', {
   name: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(156),
     allowNull: false,
-    unique: true
+    unique: true,
+    primaryKey: true
   },
   password: {
-    type: DataTypes.STRING,
+    type: DataTypes.CHAR(60),
     allowNull: false,
   }
 }, { timestamps: true });

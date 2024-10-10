@@ -17,46 +17,62 @@ import {
 import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
+import CollaborationManager from '../services/CollaborationManager.js'
 import Debounce from '../utils/debounce.js';
 
 
+const router = useRouter();
 const route = useRoute();
-const collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
-const collaborating = collabName !== null;
+let collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
+let collaborating = collabName !== null;
 
 let indexedDBManager = null;
 let taskManager = null;
+let collabManager = null;
 const uiManager = new UIManager();
 
 const managersLoaded = ref(false);
 const initializeManagers = async () => {
   // todo: if in collab, check if it exists if no, pusher ask for whole version
   try {
-    indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
-    taskManager = new TaskManager(indexedDBManager, collabName);
-    await taskManager.init();
-    uiManager.init(taskManager);
+    // has to create new cuz it wasnt refreshed 
+    collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
+    collaborating = collabName !== null;
 
-    managersLoaded.value = true;
+    new Promise((resolve, reject) => {
+      if (collaborating) {
+        collabManager = new CollaborationManager(collabName);
+  
+        collabManager.subscribe()
+        .then(() => {
+          console.log("subscription succeeded");
+          resolve();
+        })
+        .catch((err) => {
+          console.log(err); // Object { type: "AuthError", error: "Unable to retrieve auth string from channel-authorization endpoint - received status: 401 from /api/pusher/channel-auth. Clients must be authorized to join private or presence channels. See: https://pusher.com/docs/channels/server_api/authorizing-users/", status: 401 }
+          // OR ERROR 500 if session not initialized
+          router.push("/join"); // TODO: add popup
+          reject();
+        });
+      } else {
+        resolve();
+      }
+    })
+    .then(async () => {
+      indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
+      taskManager = new TaskManager(indexedDBManager, collabManager);
+      await taskManager.init();
+      uiManager.init(taskManager);
+  
+      managersLoaded.value = true;
+    })
+
   }
   catch(error) {
     console.log("Error during loading managers:", error);
   }
 }
 
-if (collaborating) {
-  var pusher = getPusher();
-  let channel = pusher.subscribe(`private-${collabName}`);
-  console.log("halo");
-  channel.bind("pusher:subscription_succeeded", () => {
-    console.log("success");
-  })
-
-  channel.bind("pusher:subscription_error", () => {
-    console.log("error");
-  })
-  console.log("halo2");
-}
 // check for route change ( from collab to local cuz it didnt refresh managers )
 watch(() => route.name, (newName, oldName) => {
   if ( newName !== oldName ) {

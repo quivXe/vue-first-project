@@ -28,7 +28,7 @@ app.use('/api/operations', operationRoutes);
 app.use('/api', pusherAuthRoute);
 
 app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+    res.sendFile(path.join(__dirname, "..", "client", "dist", "index.html"));
 })
 
 // Database sync

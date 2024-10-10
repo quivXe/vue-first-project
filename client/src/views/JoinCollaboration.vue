@@ -47,7 +47,7 @@ function onSubmit() {
     .then(data => {
         collabName.value = '';
         password.value = '';
-        // router.push(`/collaborations/${data.name}`);
+        router.push(`/collaborations/${data.name}`);
     })
     .catch(error => {
         handleFetchError(error);
