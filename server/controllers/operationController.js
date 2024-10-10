@@ -13,6 +13,8 @@ const { Op } = require('sequelize');
  * 
  * 201 - Request successful, sends created operation.
  * 
+ * 422 - Invalid operationType. (available: 'add' | 'update' | 'delete')
+ * 
  * 500 - Internal error occured.
  * 
  * @async
@@ -35,11 +37,17 @@ const { Op } = require('sequelize');
  *   "operationType": "add",
  *   "details": {taskId: 5, parentId: 1},
  *   "operation_part": 1,
- *   "operation_max_part": 3
+ *   "operation_max_part": 3,
+ *   "socket_id": 101010.101010
  * }
  */
 exports.logOperation = async (req, res) => {
   const { collabName, operationType, details, operation_part, operation_max_part, socket_id } = req.body;
+
+  if (operationType !== "add" && operationType !== "update" && operationType !== "delete") {
+    res.status(422).json({error: 'Invalid operationType'});
+    return;
+  }
   try {
     const newOperation = await Operation.create({ 
       collabName, 
@@ -50,7 +58,7 @@ exports.logOperation = async (req, res) => {
     });
 
     const eventData = {type: operationType, details};
-    pusher.trigger(`private-${collabName}`, "new-operation", eventData, socket_id).catch(err => {
+    pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id }).catch(err => {
       res.status(500).json({error: {pusherError: err}});
       console.log(err);
       return;

@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 
-const VERSION = 2;
+const VERSION = 3;
 
 /**
  * Manages interactions with IndexedDB for storing and retrieving tasks.
@@ -40,8 +40,10 @@ class IndexedDBManager {
                         autoIncrement: true
                     });
 
-                    store.createIndex('parentId', 'parentId');
-                    store.createIndex('collabName', 'collabName');
+                    store.createIndex('parentId', 'parentId', { unique: false });
+                    store.createIndex('collabName', 'collabName', { unique: false });
+                    store.createIndex('collabName_collabTaskId', ['collabName', 'collabTaskId'], { unique: true });
+                    store.createIndex('collabName_parentId', ['collabName', 'parentId'], { unique: false });
                 }
             }
         });
@@ -115,6 +117,18 @@ class IndexedDBManager {
     }
 
     /**
+     * Retrieves tasks by their parent ID in given collaboration.
+     * @param {string} collabName - Collaboration name to search in.
+     * @param {number} parentId - The ID of the parent task.
+     * @returns {Promise<Array<Object>>} A promise that resolves with an array of tasks.
+     */
+    async getTasksByParentIdInCollab(collabName, parentId) {
+        const db = await this.dbPromise;
+        const tasks = await db.getAllFromIndex(this.storeName, "collabName_parentId", [collabName, parentId]);
+        return tasks;
+    }
+
+    /**
      * Retrieves tasks by their collaboration name.
      * @param {string} collabName - The name of the collaboration.
      * @returns {Promise<Array<Object>>} A promise that resolves with an array of tasks.
@@ -123,6 +137,18 @@ class IndexedDBManager {
         const db = await this.dbPromise;
         const tasks = await db.getAllFromIndex(this.storeName, "collabName", collabName);
         return tasks;
+    }
+
+    /**
+     * Retrieves task by its collaboration name and collaboration task id.
+     * @param {string} collabName - The name of the collaboration.
+     * @param {number} collabTaskId - The id of the task in given collaboration 
+     * @returns {Promise<Array<Object>>} A promise that resolves with an array of tasks.
+     */
+    async getTaskByCollabTaskId(collabName, collabTaskId) {
+        const db = await this.dbPromise;
+        const task = await db.getFromIndex(this.storeName, "collabName_collabTaskId", [collabName, collabTaskId]);
+        return task;
     }
 }
 

@@ -59,11 +59,20 @@ const initializeManagers = async () => {
       }
     })
     .then(async () => {
+      // IDB
       indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
+
+      // TASK MANAGER
       taskManager = new TaskManager(indexedDBManager, collabManager);
       await taskManager.init();
+
+      // BIND PUSHER
+      if (collaborating) collabManager.bind(taskManager);
+
+      // INITIALIZE UI MANAGER
       uiManager.init(taskManager);
   
+      // FINISH BY DISPLAYING UI
       managersLoaded.value = true;
     })
 

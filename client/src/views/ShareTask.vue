@@ -104,16 +104,18 @@ async function onSubmit() {
     fetchPost("/api/collaborations/create", payload)
     .then(async data => {
 
+        let currentCollabTaskId = 0;
         const exportTask = async (parentId, newParentId) => {
             const parent = await localIndexedDBManager.getObjectById(parentId);
             delete parent.id;
             parent.collabName = data.name;
             parent.parentId = newParentId;
+            parent.collabTaskId = ++currentCollabTaskId;
 
             const createdParentId = await collabIndexedDBManager.addObject(parent);
 
             const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
-                return Promise.all( children.map(child => exportTask( child.id, createdParentId )) );
+                return Promise.all( children.map(child => exportTask( child.id, parent.collabTaskId )) );
             });
             return addChildrenPromise;
         }; 
