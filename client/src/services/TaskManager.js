@@ -125,17 +125,14 @@ class TaskManager {
    * @param {Object} options
    * @param {string} options.value - The name of the task to be added.
    * @param {number} [options.parentId] - The ID of the parent task. Interpreted as `collabTaskId` if in collaboration.
-   * @param {Task} [options.parent] - Parent object, where the task should be added.
+   * @param {Task|null} [options.parent] - Parent object, where the task should be added, if null, add to root.
    * @param {boolean} [options.fromUI] - Whether to send operation to collaboration if in any.
    * @returns {Promise<void>} 
    */
-  // async addTask(value, parentId, inCurrentTasks=true, updateCollab=true) {
   async addTask(options) {
-    if (options.parent) {
-      options.parent = options.parent
-    }
 
     const getMaxFlexIndex = siblings => {
+      siblings = siblings.filter(t => t.status === this.TASK_STATUSES.TODO);
       let maxFlexIndex;
       if (siblings.length > 0) {
         maxFlexIndex = siblings.reduce((acc, curr) => acc > curr.flexIndex ? acc : curr.flexIndex, -Infinity);
@@ -145,44 +142,26 @@ class TaskManager {
       return maxFlexIndex;
     }
 
-    let task;
-    
+    let task = {
+      name: options.value,
+      status: this.TASK_STATUSES.TODO,
+      description: '',
+    };
+    let parentId;
+
     if (this.collaborating) {
-      let parentId = options.parentId || options.parent?.collabTaskId || -1;
-
-      // Get maxFlexIndex
-      let siblings = await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId);
-      let maxFlexIndex = getMaxFlexIndex(siblings);
-
-      // Create task object
-      task = {
-        name: options.value,
-        flexIndex: maxFlexIndex + 2,
-        status: 0,
-        parentId: parentId,
-        description: '',
-        collabName: this.collabManager.collabName,
-        collabTaskId: ++this.currentCollabTaskId
-      };
-
+      task.collabName = this.collabManager.collabName;
+      task.collabTaskId = ++this.currentCollabTaskId;
+      parentId = options.parentId || options.parent?.collabTaskId || -1;
+    } 
+    else { 
+      parentId = options.parentId || options.parent?.id || -1;
     }
-    else {
-      let parentId = options.parentId || options.parent?.id || -1;
+    task.parentId = parentId;
 
-      // Get maxFlexIndex
-      let siblings = await this.indexedDBManager.getTasksByParentId(parentId);
-      let maxFlexIndex = getMaxFlexIndex(siblings);
-
-      // Create task object
-      task = {
-        name: options.value,
-        flexIndex: maxFlexIndex + 2,
-        status: 0,
-        parentId: parentId,
-        description: ''
-      };
-
-    }
+    // Set maxFlexIndex
+    const siblings = await this.getTasksByParentId(parentId);
+    task.flexIndex = getMaxFlexIndex(siblings) + 2;
     
     // Add to IndexedDB
     let id;
@@ -215,9 +194,7 @@ class TaskManager {
     // Update current tasks if needed
     if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);
 
-  }
-
-  /**
+  }  /**
    * Removes a task from indexedDBManager.
    *
    * @async
@@ -228,41 +205,25 @@ class TaskManager {
    * 
    */
   async removeTask(options) {
-    let indexedDBManager = this.indexedDBManager;
-    let collabName = this.collabManager?.collabName;
+    const indexedDBManager = this.indexedDBManager;
+    const taskManager = this;
 
     async function removeTaskWithChildren(task) {
       const removeSelfPromise = indexedDBManager.deleteObject(task.id);
-      const childrenPromise = indexedDBManager.getTasksByParentId(task.id).then(children => {
+      const childrenPromise = taskManager.getTasksByParentId(taskManager.collaborating ? task.collabTaskId : task.id).then(children => {
         return Promise.all(children.map(child => removeTaskWithChildren(child)));
       });
       return Promise.all([removeSelfPromise, childrenPromise]);
     }
-    async function removeTaskWithChildrenInCollab(task) {
-      const removeSelfPromise = indexedDBManager.deleteObject(task.id);
-      const childrenPromise = indexedDBManager.getTasksByParentIdInCollab(collabName, task.collabTaskId).then(children => {
-        return Promise.all(children.map(child => removeTaskWithChildrenInCollab(child)));
-      });
-      return Promise.all([removeSelfPromise, childrenPromise]);
-    }
-
-    let removeFunc;
-    let task;
-    if (this.collaborating) {
-      task = options.task || await this.indexedDBManager.getTaskByCollabTaskId(collabName, task.collabTaskId);
-      removeFunc = removeTaskWithChildrenInCollab;
-    } else {
-      task = options.task || await this.getTaskById(options.taskId);
-      removeFunc = removeTaskWithChildren
-    }
+    const task = options.task || await this.getTaskById(options.taskId);
 
     // Remove from indexedDb
     try {
-      await removeFunc(task);
+      await removeTaskWithChildren(task);
     } catch (error) {
       console.log("Failed to remove task from indexedDB", error);
       try {
-        this.retryOperation(() => removeFunc(task));
+        this.retryOperation(() => removeTaskWithChildren(task));
       } catch (retryError) {
         console.log(retryError);
         return; // Retry failed
