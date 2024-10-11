@@ -85,6 +85,19 @@ class IndexedDBManager {
     }
 
     /**
+     * Batch updates existing objects in the object store.
+     * @param {Object[]} objects - Object to be updated.
+     * @returns {Promise<void>} A promise that resolves when the object has been updated.
+     */
+    async batchUpdate(objects) {
+        const db = await this.dbPromise;
+        const tx = db.transaction(this.storeName, 'readwrite');
+        await Promise.all(
+            objects.map( object => tx.store.put(object) ).concat(tx.done)
+        );
+    }
+
+    /**
      * Deletes an object by its ID.
      * @param {number} id - The ID of the object to delete.
      * @returns {Promise<void>} A promise that resolves when the object has been deleted.

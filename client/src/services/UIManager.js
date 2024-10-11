@@ -13,6 +13,7 @@ import TaskManager from './TaskManager';
  * @param {Int} parentId - Id of task that is one tier above
  * @param {String} description
  * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
+ * @param {number} [collabTaskId] - The id of task in collaboration.
  * @param {number} [id=null] - Task id, autoincremented
  */
 
@@ -106,7 +107,7 @@ class UIManager {
    * @param {Task} task - The task object to be deleted.
    */
   deleteTaskClicked(task) {
-    this.taskManager.removeTask(task.id);
+    this.taskManager.removeTask({ task, fromUI: true });
   }
 
   /**
@@ -116,7 +117,7 @@ class UIManager {
    * @param {String} newName - The new name for the task.
    */
   changeTaskName(task, newName) {
-    this.taskManager.changeTaskName(task, newName);
+    this.taskManager.changeTaskName(task, newName, true);
     this.changingTaskName = null;
   }
 
@@ -127,7 +128,7 @@ class UIManager {
    * @param {String} newDescription - The new description for the task.
    */
   updateDescription(task, newDescription) {
-    this.taskManager.updateDescription(task, newDescription);
+    this.taskManager.updateDescription(task, newDescription, true);
   }
 
   /** 
@@ -143,8 +144,8 @@ class UIManager {
    * @param {String} value - The name of the new task to be added.
    */
   newTaskBlur(value) {
-    let parentId = this.getCurrentParent(true, true);
-    this.taskManager.addTask(value, parentId);
+    let parent = this.getCurrentParent();
+    this.taskManager.addTask({ value, parent, fromUI: true });
     this.creatingNewTask = false;
   }
 
@@ -220,28 +221,22 @@ class UIManager {
   stopDraggingTaskTriggered(task) {
     this.draggedTask = null;
 
-    // Update flex indexes
-    let _currentTasks = this.currentTasks;
-    _currentTasks.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
-    for (let i = 0; i < _currentTasks.length; i++) {
-      _currentTasks[i].flexIndex = (i + 1) * 2;
-    }
-
-    this.taskManager.updateStatus(task, task.status);
+    this.taskManager.fixFlexIndexesAndSetStatus({draggedTask: task, fromUI: true});
   }
 
   /**
    * Returns the task object of the current parent.
    *
-   * @param {boolean} [getId=false] - Whether to return the parent's ID instead of the task object.
-   * @param {boolean} [getCollabTaskId=false] - Whether to return the parent's collabTaskId instead of the task object if collaborating.
+   * @param {Object} [options={}]
+   * @param {boolean} [options.getId] - Whether to return the parent's ID instead of the task object.
    * @returns {Object|null} The current parent task object, or null if none exists.
    */
-  getCurrentParent(getId = false, getCollabTaskIdIfAvailable = false) {
+  getCurrentParent(options={}) {
+    const { getId } = options;
+
     let currentParent = this._parentTree.value[this._parentTree.value.length - 1];
-    if (!getId) return currentParent || null;
-    if (getCollabTaskIdIfAvailable && this.taskManager.collaborating) return currentParent?.collabTaskId || -1;
-    return currentParent?.id || -1;
+    if (getId) return currentParent?.id || -1;
+    return currentParent || null;
   }
 
   /**
@@ -251,7 +246,7 @@ class UIManager {
    */
   pushParent(task) {
     this._parentTree.value.push(task);
-    this.taskManager.updateCurrentTasks(this.taskManager.collaborating ? task.collabTaskId : task.id);
+    this.taskManager.updateCurrentTasks({ parent: task });
   }
 
   /**
@@ -261,8 +256,7 @@ class UIManager {
    */
   popParent() {
     let parentPopped = this._parentTree.value.pop();
-    let newParentId = this.getCurrentParent(true, true);
-    if (parentPopped !== undefined) this.taskManager.updateCurrentTasks(newParentId);
+    if (parentPopped !== undefined) this.taskManager.updateCurrentTasks({ parent: this.getCurrentParent() });
     return parentPopped;
   }
 
@@ -272,22 +266,24 @@ class UIManager {
    * @param {Task} task - The task object to be selected as a parent.
    */
   selectParentInTree(task) {
-    let currentParentId = this.getCurrentParent(true, true);
 
-    if (task === null) {
-      this._parentTree.value = []; // Home is clicked
+    let currentParent = this.getCurrentParent();
+
+    if (task === currentParent) return; // Nothing has changed
+
+    if (task === null) { // Home clicked
+      this._parentTree.value = [];
+      currentParent = null;
     } else {
-      let taskId = this.taskManager.collaborating ? task.collabTaskId : task.id;
-      while (taskId !== this.getCurrentParent(true, true)) {
+      while (task.id !== currentParent.id) {
         this.parentTree.pop();
+        currentParent = this.getCurrentParent();
       }
     }
 
-    // Update current tasks if needed
-    let newParentId = this.getCurrentParent(true, true);
-    if (currentParentId !== newParentId) {
-      this.taskManager.updateCurrentTasks(newParentId);
-    }
+    // Update current tasks
+    this.taskManager.updateCurrentTasks({ parent: currentParent });
+
   }
 }
 

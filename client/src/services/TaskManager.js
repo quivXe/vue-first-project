@@ -13,6 +13,7 @@ import CollaborationManager from './CollaborationManager';
  * @param {Int} parentId - Id of task that is one tier above
  * @param {String} description
  * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
+ * @param {number} [collabTaskId] - The id of task in collaboration.
  * @param {number} [id=null] - Task id, autoincremented
  */
 
@@ -43,6 +44,7 @@ class TaskManager {
 
     this.collaborating = collabManager !== null;
     this.currentTasks = ref([]);
+    this.currentUIParent;
 
     // Binding methods to ensure correct context
     this.addTask = this.addTask.bind(this);
@@ -58,23 +60,38 @@ class TaskManager {
    * @param {number} [currentParentId=-1] - The parent ID for which to fetch tasks. Defaults to -1 (root).
    */
   async init(currentParentId=-1) {
+
+    // if in collab, sets current currentCollabTaskId.
     if (this.collaborating) {
       let tasksInCollab = await this.indexedDBManager.getTasksByCollabName(this.collabManager.collabName);
       this.currentCollabTaskId = tasksInCollab.reduce((acc, curr) => acc > curr.collabTaskId ? acc : curr.collabTaskId, -Infinity);
     }
-    await this.updateCurrentTasks(currentParentId);
+    await this.updateCurrentTasks({parentId: currentParentId});
   }
 
   /**
-   * Updates the current tasks based on the provided parent ID.
+   * Updates the current tasks based on the provided parent / parentId.
    *
    * @async
-   * @param {number} parentId - The parent ID for which to fetch tasks.
+   * @param {Object} options - Contains either parentId or parent object.
+   * @param {number} [options.parentId] - The parent ID for which to fetch tasks.
+   * @param {Task} [options.parent] - The parent object.
    */
-  async updateCurrentTasks(parentId) {
-    this.currentTasks.value = this.collaborating ?
-      await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId) :
-      await this.indexedDBManager.getTasksByParentId(parentId);
+  async updateCurrentTasks(options) {
+    if (this.collaborating) {
+      let parentId = options.parentId ? 
+        options.parentId :
+        options.parent?.collabTaskId || -1;
+      this.currentTasks.value = await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId);
+      this.currentParentId = parentId;
+    }
+    else {
+      let parentId = options.parentId ?
+        options.parentId :
+        options.parent?.id || -1;
+      this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
+      this.currentParentId = parentId;
+    }
   }
 
   /**
@@ -91,44 +108,84 @@ class TaskManager {
   }
 
   /**
-   * Adds a new task to the indexedDBManager. If inCurrentTasks is true, updates currentTasks.
-   *
-   * @async
-   * @param {String} value - The name of the task to be added.
-   * @param {number} parentId - The ID of the parent task.
-   * @param {boolean} [inCurrentTasks=true] - Whether to update currentTasks with the new task. Defaults to true.
-   * @param {boolean} [updateCollab=true] - Whether to send update to collaboration.
-   * @returns {Promise<void>} 
+   * Retrieves tasks array from the indexedDBManager using the given parent ID. If collaborating, it search in collaboration.
+   * 
+   * @param {number} parentId - The ID of the parent
+   * @returns {Promise<Task[]>} Array of tasks that match given parentId 
    */
-  async addTask(value, parentId, inCurrentTasks=true, updateCollab=true) {
-
-    // Get maxFlexIndex
-    const siblings = this.collaborating ?
+  async getTasksByParentId(parentId) {
+    return this.collaborating ?
       await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId) :
       await this.indexedDBManager.getTasksByParentId(parentId);
+  }
 
-    let maxFlexIndex;
-    if (siblings.length > 0) {
-      maxFlexIndex = siblings.reduce((acc, curr) => acc > curr.flexIndex ? acc : curr.flexIndex, -Infinity);
-    } else {
-      maxFlexIndex = 0;
+  /**
+   * Adds a new task to the indexedDBManager. If inCurrentTasks is true, updates currentTasks.
+   * 
+   * @param {Object} options
+   * @param {string} options.value - The name of the task to be added.
+   * @param {number} [options.parentId] - The ID of the parent task. Interpreted as `collabTaskId` if in collaboration.
+   * @param {Task} [options.parent] - Parent object, where the task should be added.
+   * @param {boolean} [options.fromUI] - Whether to send operation to collaboration if in any.
+   * @returns {Promise<void>} 
+   */
+  // async addTask(value, parentId, inCurrentTasks=true, updateCollab=true) {
+  async addTask(options) {
+    if (options.parent) {
+      options.parent = options.parent
     }
 
-    // Create task object
-    let task = {
-      name: value,
-      flexIndex: maxFlexIndex + 2,
-      status: 0,
-      parentId: parentId,
-      description: ''
-    };
+    const getMaxFlexIndex = siblings => {
+      let maxFlexIndex;
+      if (siblings.length > 0) {
+        maxFlexIndex = siblings.reduce((acc, curr) => acc > curr.flexIndex ? acc : curr.flexIndex, -Infinity);
+      } else {
+        maxFlexIndex = 0;
+      }
+      return maxFlexIndex;
+    }
+
+    let task;
+    
     if (this.collaborating) {
-      task.collabName = this.collabManager.collabName;
-      task.collabTaskId = ++this.currentCollabTaskId;
+      let parentId = options.parentId || options.parent?.collabTaskId || -1;
+
+      // Get maxFlexIndex
+      let siblings = await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId);
+      let maxFlexIndex = getMaxFlexIndex(siblings);
+
+      // Create task object
+      task = {
+        name: options.value,
+        flexIndex: maxFlexIndex + 2,
+        status: 0,
+        parentId: parentId,
+        description: '',
+        collabName: this.collabManager.collabName,
+        collabTaskId: ++this.currentCollabTaskId
+      };
+
+    }
+    else {
+      let parentId = options.parentId || options.parent?.id || -1;
+
+      // Get maxFlexIndex
+      let siblings = await this.indexedDBManager.getTasksByParentId(parentId);
+      let maxFlexIndex = getMaxFlexIndex(siblings);
+
+      // Create task object
+      task = {
+        name: options.value,
+        flexIndex: maxFlexIndex + 2,
+        status: 0,
+        parentId: parentId,
+        description: ''
+      };
+
     }
     
-    let id;
     // Add to IndexedDB
+    let id;
     try {
       id = await this.indexedDBManager.addObject(task);
     } catch (error) {
@@ -140,57 +197,72 @@ class TaskManager {
         return; // Retry failed
       }
     }
-
-    // Send update to collaboration
-    if (this.collaborating && updateCollab) {
-      this.collabManager.send(
-        "add",
-        {
-          value: value,
-          parentId: parentId
-        }
-      );
-    }
-
-    // Update current tasks (if needed)
     task.id = id;
-    if (inCurrentTasks) {
-      this.currentTasks.value.push(task);
+    
+    // Send update to collaboration if needed.
+    if (this.collaborating && options.fromUI) {
+      
+      // this.collabManager.send(
+      //   "add",
+      //   {
+      //     value: task.name,
+      //     parentId: task.parentId
+      //   }
+      // );
+
     }
-    // this.updateCurrentTasks(-1);
+  
+    // Update current tasks if needed
+    if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);
+
   }
 
   /**
-   * Removes a task from indexedDBManager. If inCurrentTasks is true, updates currentTasks accordingly.
+   * Removes a task from indexedDBManager.
    *
    * @async
-   * @param {number} taskId - The id of task object to be removed. If collaborating, it will be collabTaskId.
-   * @param {boolean} [inCurrentTasks=true] - Whether to update currentTasks after removal. Defaults to true.
-   * @param {boolean} [updateCollab=true] - Whether to send update to collaboration.
-   * @returns {Promise<void>} 
+   * @param {Object} options
+   * @param {number} [options.taskId] - The id of the task object to be removed. If collaborating, it will be interpreter as `collabTaskId`.
+   * @param {Task} [options.task] - The task object to be removed.
+   * @param {boolean} [options.fromUI] - Whether to send update to collaboration if in any.
+   * 
    */
-  async removeTask(taskId, inCurrentTasks=true, updateCollab=true) {
+  async removeTask(options) {
     let indexedDBManager = this.indexedDBManager;
+    let collabName = this.collabManager?.collabName;
 
-    async function removeTaskWithChildren(taskId) {
-      const removeSelfPromise = indexedDBManager.deleteObject(taskId);
-      const childrenPromise = indexedDBManager.getTasksByParentId(taskId).then(children => {
-        return Promise.all(children.map(child => removeTaskWithChildren(child.id)));
+    async function removeTaskWithChildren(task) {
+      const removeSelfPromise = indexedDBManager.deleteObject(task.id);
+      const childrenPromise = indexedDBManager.getTasksByParentId(task.id).then(children => {
+        return Promise.all(children.map(child => removeTaskWithChildren(child)));
+      });
+      return Promise.all([removeSelfPromise, childrenPromise]);
+    }
+    async function removeTaskWithChildrenInCollab(task) {
+      const removeSelfPromise = indexedDBManager.deleteObject(task.id);
+      const childrenPromise = indexedDBManager.getTasksByParentIdInCollab(collabName, task.collabTaskId).then(children => {
+        return Promise.all(children.map(child => removeTaskWithChildrenInCollab(child)));
       });
       return Promise.all([removeSelfPromise, childrenPromise]);
     }
 
-    let taskRecordId = this.collaborating ?
-      this.indexedDBManager.getTaskByCollabTaskId(taskId) :
-      taskId;
+    let removeFunc;
+    let task;
+    if (this.collaborating) {
+      task = options.task || await this.indexedDBManager.getTaskByCollabTaskId(collabName, task.collabTaskId);
+      removeFunc = removeTaskWithChildrenInCollab;
+    } else {
+      task = options.task || await this.getTaskById(options.taskId);
+      removeFunc = removeTaskWithChildren
+    }
 
     // Remove from indexedDb
     try {
-      await removeTaskWithChildren(taskRecordId);
+      await removeFunc(task);
     } catch (error) {
       console.log("Failed to remove task from indexedDB", error);
       try {
-        this.retryOperation(() => removeTaskWithChildren(taskRecordId));
+        this.retryOperation(() => removeFunc(task));
       } catch (retryError) {
         console.log(retryError);
         return; // Retry failed
@@ -198,17 +270,17 @@ class TaskManager {
     }
 
     // Send to collab
-    if (this.collaborating && updateCollab) {
-      this.collabManager.send(
-        "delete",
-        {
-          taskId: taskId
-        }
-      );
+    if (this.collaborating && options.fromUI) {
+      // this.collabManager.send(
+      //   "delete",
+      //   {
+      //     taskId: task.collabTaskId
+      //   }
+      // );
     }
 
-    if (inCurrentTasks) {
-      let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== taskRecordId);
+    if (task.parentId === this.currentParentId) {
+      let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
       this.currentTasks.value = newCurrentTasks;
     }
   }
@@ -219,10 +291,10 @@ class TaskManager {
    * @async
    * @param {Task} task - The task object to be updated.
    * @param {String} newName - The new name for the task.
-   * @param {boolean} [updateCollab=true] - Whether to send update to collaboration.
+   * @param {boolean} [fromUI=false] - Whether to send update to collaboration if in any.
    * @returns {Promise<void>}
    */
-  async changeTaskName(task, newName, updateCollab=true) {
+  async changeTaskName(task, newName, fromUI=false) {
     task.name = newName;
 
     // Update indexedDb
@@ -239,15 +311,15 @@ class TaskManager {
     }
 
     // Send to collab
-    if (this.collaborating && updateCollab) {
-      this.collabManager.send(
-        "update",
-        {
-          type: 'name',
-          taskId: task.id,
-          newName: newName
-        }
-      );
+    if (this.collaborating && fromUI) {
+      // this.collabManager.send(
+      //   "update",
+      //   {
+      //     type: 'name',
+      //     taskId: task.id,
+      //     newName: newName
+      //   }
+      // );
     }
   }
 
@@ -257,10 +329,10 @@ class TaskManager {
    * @async
    * @param {Task} task - The task object to be updated.
    * @param {String} newDescription - The new description for the task.
-   * @param {boolean} [updateCollab=true] - Whether to send update to collaboration.
+   * @param {boolean} [fromUI=false] - Whether to send update to collaboration if in any.
    * @returns {Promise<void>}
    */
-  async updateDescription(task, newDescription, updateCollab=true) {
+  async updateDescription(task, newDescription, fromUI=false) {
     task.description = newDescription;
 
     // Update indexedDb
@@ -277,37 +349,81 @@ class TaskManager {
     }
 
     // Send to collab
-    if (this.collaborating && updateCollab) {
-      this.collabManager.send(
-        "update",
-        {
-          type: "description",
-          taskId: task.id,
-          newDescription: newDescription
-        }
-      )
+    if (this.collaborating && fromUI) {
+      // this.collabManager.send(
+      //   "update",
+      //   {
+      //     type: "description",
+      //     taskId: task.id,
+      //     newDescription: newDescription
+      //   }
+      // )
     }
   }
 
   /**
-   * Updates the status of a task in the indexedDBManager and current tasks.
+   * Updates the status and flex indexes after dragging.
    *
    * @async
    * @param {Task} task - The task object to be updated.
    * @param {String} newStatus - The new status for the task. Should be one of the TASK_STATUSES.
-   * @param {boolean} [updateCollab=true] - Whether to send update to collaboration.
+   * @param {boolean} [fromUI=false] - Whether to send update to collaboration if in any.
    * @returns {Promise<void>}
+   * 
+   * @param {Object} options
+   * @param {Task} [options.draggedTask] - The dragged task (with new flexIndex and new status)
+   * @param {number} [options.draggedTaskId] - The id of the dragged task. Interpreted as `collabTaskId` if in collaboration.
+   * @param {number} [options.newStatus] - New status of dragged task.
+   * @param {number} [options.newFlexIndex] - New flex index of dragged task.
+   * @param {boolean} [options.fromUI] - Whether to send to collaboration if in any.
+   * 
    */
-  async updateStatus(task, newStatus, updateCollab=true) {
-    task.status = newStatus;
+  async fixFlexIndexesAndSetStatus(options) {
 
+    // For sending to collaboration
+    let savedNewFlexIndex = options.newFlexIndex || options.draggedTask.flexIndex;
+
+    // Get task
+    let task;
+    if (options.draggedTask) task = options.draggedTask;
+    else {
+      task = await this.getTaskById(options.draggedTaskId)
+      task.status = options.newStatus;
+      task.flexIndex = options.newFlexIndex;
+    }
+
+    // Get siblings
+    let siblings = options.fromUI ?
+      toRaw(this.currentTasks.value) :
+      await this.getTasksByParentId(task.parentId);
+    
+    // To update for indexedDB batch
+    let toUpdate = [];
+    for (let i = 0; i < siblings.length; i++) {
+      const t = siblings[i];
+      if (t.id === task.id) {
+        t.status = task.status;
+        t.flexIndex = task.flexIndex;
+        toUpdate.push(t);
+      }
+      else if (t.status === task.status) {
+        toUpdate.push(t);
+      }
+    }
+    
+    toUpdate.sort((t1, t2) => t1.flexIndex - t2.flexIndex);
+    for (let i = 0; i < toUpdate.length; i++) {
+      toUpdate[i].flexIndex = (i + 1) * 2;
+    }
+    
+    
     // Update indexedDb
     try {
-      await this.indexedDBManager.updateObject(toRaw(task));
+      await this.indexedDBManager.batchUpdate(toRaw(toUpdate));
     } catch (error) {
       console.log("Failed to update status", error);
       try {
-        this.retryOperation(() => this.indexedDBManager.updateObject(toRaw(task)));
+        this.retryOperation(() => this.indexedDBManager.batchUpdate(toRaw(toUpdate)));
       } catch (retryError) {
         console.log(retryError);
         return; // Retry failed
@@ -315,15 +431,16 @@ class TaskManager {
     }
 
     // Send to collab
-    if (this.collaborating && updateCollab) {
-      this.collabManager.send(
-        "update",
-        {
-          type: "status",
-          taskId: task.id,
-          newStatus: newStatus
-        }
-      )
+    if (this.collaborating && options.fromUI) {
+      // this.collabManager.send(
+      //   "update",
+      //   {
+      //     type: "drag",
+      //     taskId: task.collabTaskId,
+      //     newStatus: task.status,
+      //     newFlexIndex: savedNewFlexIndex
+      //   }
+      // )
     }
   }
 
