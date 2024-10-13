@@ -15,7 +15,7 @@ const pusher = require('../config/pusher');
  * 
  * 400 - Bad Request; either socket_id or channel_name is missing.
  * 
- * 401 - Unauthorized; the channel_name does not match the expected format.
+ * 401 - Unauthorized from middleware.
  * 
  * 500 - Internal Server Error; session not initialized or other internal error occurred.
  * 
@@ -31,16 +31,9 @@ const pusher = require('../config/pusher');
 exports.channelAuth = async (req, res) => {
     const { socket_id, channel_name } = req.body;
 
-    if (!req.session || !req.session.collabName) {
-        return res.status(500).json({ error: 'Session has not been initialized. Please log in.' });
-    }
     if (!socket_id || !channel_name) {
-        return res.status(400).json({ error: 'Bad Request: socket_id and channel_name are required.' });
+        return res.status(400).json({ error: 'Bad Request: Either socket_id or channel_name is missing.' });
     }
-    if (`private-${req.session.collabName}` !== channel_name) {
-        return res.status(401).json({ error: 'Unauthorized: You do not have permission to access this channel.' });
-    }
-
     const auth = pusher.authorizeChannel(socket_id, channel_name);
     return res.status(200).json(auth);
 };

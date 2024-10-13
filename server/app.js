@@ -8,6 +8,7 @@ const { sequelize } = require('./models'); // Import Sequelize instance
 const collaborationRoutes = require('./routes/collaborationRoutes');
 const operationRoutes = require('./routes/operationRoutes');
 const pusherAuthRoute = require('./routes/pusherAuthRoute');
+const requestCurrentVersionRoute = require('./routes/requestCurrentVersionRoute');
 const createRateLimiter = require('./middlewares/rateLimiter');
 const session = require('./config/session');
 
@@ -26,6 +27,7 @@ app.use(express.static(path.join(__dirname, '../client/dist'))); // Serve static
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/operations', operationRoutes);
 app.use('/api', pusherAuthRoute);
+app.use('/api', requestCurrentVersionRoute);
 
 app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "..", "client", "dist", "index.html"));

@@ -55,6 +55,7 @@ const initializeManagers = async () => {
           reject();
         });
       } else {
+        collabManager = null;
         resolve();
       }
     })
@@ -111,6 +112,7 @@ onMounted(async () => {
     </div>
     <div class="main">
       <div class="columns">
+        <div @click="collabManager.requestCurrentVersion">TEMP REQUEST</div>
         <Column
           v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
           :key="taskStatusNumber"
