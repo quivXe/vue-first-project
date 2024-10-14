@@ -1,5 +1,4 @@
 // /server/controllers/collabController.js
-const { compare } = require('bcrypt');
 const { Collaboration } = require('../models');
 const { hashPassword, comparePasswords } = require("../utils/hashUtils");
 require('dotenv').config();
@@ -56,9 +55,11 @@ exports.createCollaboration = async (req, res) => {
       return;
     }
 
-    const hashedPassword = await hashPassword(password);
     // Create new collab
+    const hashedPassword = await hashPassword(password);
     const newCollab = await Collaboration.create({ name, password: hashedPassword });
+    // Set session
+    req.session.collabName = newCollab.name;
     res.status(201).json({ name: newCollab.name });
     return;
 

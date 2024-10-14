@@ -55,6 +55,7 @@ class IndexedDBManager {
      * @returns {Promise<number>} The ID of the added object.
      */
     async addObject(object) {
+        console.log("ADDING OBJECT");
         const db = await this.dbPromise;
         const tx = db.transaction(this.storeName, 'readwrite');
         const id = await tx.store.add(object);

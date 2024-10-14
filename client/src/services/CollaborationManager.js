@@ -1,6 +1,7 @@
 import { getPusher } from "./pusherClient";
 import { fetchPost } from '../utils/fetchUtil';
-import TaskManager from "./TaskManager";
+import { setCookie, getCookie } from "../utils/cookieUtils";
+import { importTasks } from "../utils/taskTransferUtils";
 
 class CollaborationManager {
     constructor(collabName) {
@@ -27,49 +28,19 @@ class CollaborationManager {
      * @param {TaskManager} taskManager 
      */
     bind(taskManager) {
-        console.log("binding...")
 
         /* ------------------------- New operation listener ------------------------- */
         this.pusher.bind("new-operation", async (data) => {
             console.log("new operation received");
             const type = data.type;
             const details = data.details;
+            const timestamp = data.timestamp;
             
-            switch (type) {
-                case "add":
-                    taskManager.addTask({
-                        value: details.value,
-                        parentId: details.parentId,
-                        fromUI: false
-                    });
-                    break;
-
-                case "update":
-                    console.log(details.taskId);
-                    
-                    if (details.type === "name") {
-                        let task = await taskManager.getTaskById(details.taskId);
-                        taskManager.changeTaskName(task, details.newName, false);
-                    }
-                    else if (details.type === "description") {
-                        let task = await taskManager.getTaskById(details.taskId);
-                        taskManager.updateDescription(task, details.newDescription, false);
-                    }
-                    else if (details.type === "drag") taskManager.fixFlexIndexesAndSetStatus({
-                        draggedTaskId: details.taskId,
-                        newStatus: details.newStatus,
-                        newFlexIndex: details.newFlexIndex
-                    });
-                    break;
-                
-                case "delete":
-                    taskManager.removeTask({ taskId: details.taskId, fromUI: false })
-                    break;
-            }
+            this.handleOperation(type, details, taskManager);
+            setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
 
-        // TODO: make this bind only after subscribtion and making sure this user is up to date
-        // answer for asking for current tasks version
+        // Answer for asking for current tasks version
         this.pusher.bind("asked-for-current-version", () => {
             console.log("asked for current version");
             const payload = {
@@ -87,7 +58,8 @@ class CollaborationManager {
                     type: "send-current-version",
                     collabName: this.collabName,
                     socket_id: this.pusher.connection.socket_id,
-                    tasks: tasksInCollab
+                    tasks: tasksInCollab,
+                    timestamp: getCookie(`lastUpdate-${this.collabName}`)
                 }
                 fetchPost("/api/request-current", payload)
                 .catch(err => { // something went wrong
@@ -106,12 +78,14 @@ class CollaborationManager {
             return;
         }
 
+        const operation_part = 1;
+        const operation_max_part = 1;
         const payload = {
             collabName: this.collabName,
             operationType: type,
             details,
-            operation_part: others?.operation_part || 1,
-            operation_max_part: others?.operation_max_part || 1,
+            operation_part,
+            operation_max_part,
             socket_id: this.pusher.connection.socket_id,
         }
 
@@ -119,6 +93,7 @@ class CollaborationManager {
         .then(data => {
             console.log("logging output", data);
             let timestamp = data.createdAt;
+            setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
         .catch(err => {
             this.handleError(err);
@@ -135,52 +110,137 @@ class CollaborationManager {
         }
     }
 
-    requestCurrentVersion() {
-        console.log("requesting current version...");
-        const payload = {
-            type: "get-current-version",
-            collabName: this.collabName,
-            socket_id: this.pusher.connection.socket_id,
+    async getOperationsFromDatabase(taskManager, collabIndexedDBManager) { // TODO: deleting and updating doesnt seem to work 
+        const lastUpdate = getCookie(`lastUpdate-${this.collabName}`);
+
+        /* -- If there is no last update (first time launching this collaboration), - */
+        /* ---------------- request current version from active users --------------- */
+        if (!lastUpdate) {
+            console.log("first time launch");
+            await this.requestCurrentVersion(collabIndexedDBManager);
+            return;
         }
-        fetchPost("/api/request-current", payload)
-        .then(serverResData => {
 
-            return new Promise((resolve, reject) => {
+        const payload = {
+            collabName: this.collabName,
+            timestamp: lastUpdate
+        }
 
-                if (serverResData.ok) { // someone may provide current version - listen for it
-                        this.channel.bind("get-current-version", pusherData => {
-                            this.channel.unbind("get-current-version");
-                
-                            if ( !pusherData.ok && pusherData.nooneOnline ) {
-                                reject({nooneOnline: true});
-                            }
-                            resolve(pusherData);
-                        })
-                    
-                } else {
-                    if (serverResData.message === "Noone to provide current version") {
-                        reject({ nooneOnline: true });
-                    }
-                }
-
-            })
-            
-        })
+        fetchPost("/api/operations/get", payload)
         .then(data => {
-            console.log("--------------------------------------------------");
-            console.log("Current version:");
             console.log(data);
-            console.log("--------------------------------------------------");
-        })
-        .catch(err => {
-
-            if (err.nooneOnline) {
-                console.log("Noone to provide current version");
-
-            } else { // unhandled
-                console.log(err);
+            for (let operation of data.operations) {
+                if (operation.operationType === "init") continue;
+                this.handleOperation(operation.operationType, JSON.parse(operation.details), taskManager);
             }
         })
+        .catch(async err => {
+            if (err.status === 410) { // timestamp is not in the database
+                console.log("timestamp is not in the database");
+                await this.requestCurrentVersion(collabIndexedDBManager);
+            } else {
+                console.log("unknown error", err);
+            }
+        })
+    }
+    requestCurrentVersion(collabIndexedDBManager) {
+
+        return new Promise((mainResolve, mainReject) => {
+
+            const payload = {
+                type: "get-current-version",
+                collabName: this.collabName,
+                socket_id: this.pusher.connection.socket_id,
+            }
+            fetchPost("/api/request-current", payload)
+            .then(serverResData => {
+    
+                return new Promise((resolve, reject) => {
+    
+                    if (serverResData.ok) { // someone may provide current version - listen for it
+                            this.channel.bind("get-current-version", pusherData => {
+                                this.channel.unbind("get-current-version");
+                    
+                                if ( !pusherData.ok && pusherData.nooneOnline ) {
+                                    reject({nooneOnline: true});
+                                }
+                                resolve(pusherData);
+                            })
+                        
+                    } else {
+                        if (serverResData.message === "Noone to provide current version") {
+                            reject({ nooneOnline: true });
+                        }
+                    }
+    
+                })
+                
+            })
+            .then(async data => {
+                console.log("--------------------------------------------------");
+                console.log("Current version:");
+                console.log(data);
+                console.log("--------------------------------------------------");
+
+                setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
+                const tasks = data.tasks;
+                await importTasks(collabIndexedDBManager, tasks);
+                mainResolve(data);
+            })
+            .catch(err => {
+                if (err.nooneOnline) {
+                    console.log("Noone to provide current version");
+                    
+                } else { // unhandled
+                    console.log(err);
+                }
+                mainReject(err);
+            })
+
+            
+        })
+
+    }
+
+    async handleOperation(type, details, taskManager) {
+        console.log(type, details);
+        switch (type) {
+            case "add":
+                taskManager.addTask({
+                    value: details.value,
+                    parentId: details.parentId,
+                    collabTaskId: details.collabTaskId,
+                    fromUI: false
+                });
+                break;
+    
+            case "update":
+                
+                if (details.type === "name") {
+                    taskManager.changeTaskName({
+                        taskId: details.taskId,
+                        newName: details.newName,
+                        fromUI: false 
+                    });
+                }
+                else if (details.type === "description") {
+                    taskManager.updateDescription({ 
+                        taskId: details.taskId,
+                        newDescription: details.newDescription,
+                        fromUI: false
+                    });
+                }
+                else if (details.type === "drag") taskManager.fixFlexIndexesAndSetStatus({
+                    draggedTaskId: details.taskId,
+                    newStatus: details.newStatus,
+                    newFlexIndex: details.newFlexIndex
+                });
+                break;
+            
+            case "delete":
+                taskManager.removeTask({ taskId: details.taskId, fromUI: false })
+                break;
+        }
 
     }
 }

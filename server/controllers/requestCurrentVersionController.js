@@ -3,33 +3,34 @@ const pusher = require('../config/pusher');
 
 const openForResponse = {}; // TODO: maybe later add it to memcache
 
+
 /**
- * Handles incoming requests for current collaboration version.
- *
- * Possible types of request:
- *
- * - `get-current-version`: User wants to get current version.
- *   - If someone is already asking for current version, returns 200 with message.
- *   - Otherwise, triggers `asked-for-current-version` event on channel to notify other users.
- *   - If there is no more than one subscriber, returns 204 with message.
- *   - Otherwise, returns 200. And wait for potential answer (if noone will answer in 10 seconds, trigger pusher event with `{ok: false, status: 204}`).
- *
- * - `establish-connection`: User wants to establish connection for sending current version.
- *   - If connection is already established, returns 409 with message.
- *   - Otherwise, sets user's socket_id as the one to contact when sending current version.
- *
- * - `send-current-version`: User sends current version after establishing connection.
- *   - If connection is not established, returns 409 with message.
- *   - If socket_id is wrong, returns 401 with message.
- *   - Otherwise, sends current version to other users, clears timeout and deletes from openForResponse.
+ * This function handles collaboration current version requests.
  * 
+ * It is responsible for triggering Pusher events to request current versions from other users in the same collaboration,
+ * and for accepting and forwarding the current version to the requesting user.
+ * It also handles the case where noone is online to provide the current version.
+ *
+ * Handled response status codes:
+ * 
+ * 200 - Request successful; returns the authorization data for the channel.
+ * 
+ * 400 - Bad Request; either socket_id or channel_name is missing.
+ * 
+ * 401 - Unauthorized from middleware.
+ * 
+ * 409 - Data has already been provided.
+ * 
+ * 500 - Internal Server Error; session not initialized or other internal error occurred.
+ *
  * @param {Object} req - The request object containing the request data.
- * @param {Object} req.body - The request body containing type, collabName, and socket_id.
- * @param {string} req.body.type - The type of the request ('get-current-version' | 'establish-connection' | 'send-current-version').
+ * @param {string} req.body.type - The type of the request. One of "get-current-version", "establish-connection", "send-current-version".
  * @param {string} req.body.collabName - The name of the collaboration.
- * @param {string} req.body.socket_id - The socket_id of the user.
+ * @param {string} req.body.socket_id - The socket ID of the user making the request.
+ * @param {import('../../client/src/services/TaskManager').Task[]} [req.body.tasks] - The tasks in the current version. Only required for "send-current-version" requests.
  * @param {Object} res - The response object used to send responses to the client.
  * @returns {Promise<void>} Returns a promise that resolves when the response is sent.
+ *
  */
 exports.requestCurrentVersionController = async (req, res) => {
     const { type, collabName, socket_id } = req.body;
@@ -102,16 +103,12 @@ exports.requestCurrentVersionController = async (req, res) => {
         if (openForResponse[collabName]?.isOpen) { return res.status(409).json({ error: "Establish connection first" }) };
         if (socket_id !== openForResponse[collabName].socket_id) return res.status(401).json({ error: "Wrong socket_id" });
 
-        const { tasks } = req.body;
-        if (!tasks) return res.status(400).json({ error: "Bad Request" });
+        const { tasks, timestamp } = req.body;
+        if (!tasks || !timestamp) return res.status(400).json({ error: "Bad Request" });
 
-        pusher.trigger(`private-${collabName}`, 'get-current-version', { ok: true, tasks: tasks }, { socket_id }); // TODO: split it if needed, compress it
+        pusher.trigger(`private-${collabName}`, 'get-current-version', { ok: true, tasks, timestamp }, { socket_id }); // TODO: split it if needed, compress it
         clearTimeout(openForResponse[collabName].timeout);
         delete openForResponse[collabName];
         return res.status(200).json({ ok: true });
     }
-
-
 };
-
-// 409

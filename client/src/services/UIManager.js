@@ -5,16 +5,7 @@ import TaskManager from './TaskManager';
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
  *
- * @typedef {Object} Task
- * 
- * @param {String} name
- * @param {Int} flexIndex
- * @param {Int} status - Has to be value from TaskManager.TASK_STATUSES
- * @param {Int} parentId - Id of task that is one tier above
- * @param {String} description
- * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
- * @param {number} [collabTaskId] - The id of task in collaboration.
- * @param {number} [id=null] - Task id, autoincremented
+ * @typedef {import('./TaskManager').Task} Task
  */
 
 /**
@@ -117,7 +108,7 @@ class UIManager {
    * @param {String} newName - The new name for the task.
    */
   changeTaskName(task, newName) {
-    this.taskManager.changeTaskName(task, newName, true);
+    this.taskManager.changeTaskName({ task, newName, fromUI: true });
     this.changingTaskName = null;
   }
 
@@ -128,7 +119,7 @@ class UIManager {
    * @param {String} newDescription - The new description for the task.
    */
   updateDescription(task, newDescription) {
-    this.taskManager.updateDescription(task, newDescription, true);
+    this.taskManager.updateDescription({ task, newDescription, fromUI: true });
   }
 
   /** 

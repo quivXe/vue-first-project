@@ -8,7 +8,7 @@ const Operation = sequelize.define('Operation', {
     allowNull: false,
   },
   operationType: {
-    type: DataTypes.ENUM('add', 'update', 'delete'),
+    type: DataTypes.ENUM('add', 'update', 'delete', 'init'),
     allowNull: false,
   },
   details: {

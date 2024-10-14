@@ -1,9 +1,11 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router';
-import { handleError, ref } from 'vue';
+import { ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
 import { fetchPost } from '../utils/fetchUtil';
 import Debounce from '../utils/debounce'
+import { migrateTaskTree } from '../utils/taskTransferUtils';
+import { setCookie } from '../utils/cookieUtils';
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
 const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
@@ -60,6 +62,7 @@ function filterName() {
 function handleFetchError(error) {
     // TODO: handle more errors
     // TODO: ensure response status codes are correct
+    // TODO: move it to utils and add parameter with endpoint
     let output;
     if (error.response && error.response.status) {
         switch(error.response.status) {
@@ -103,30 +106,29 @@ async function onSubmit() {
 
     fetchPost("/api/collaborations/create", payload)
     .then(async data => {
-
-        let currentCollabTaskId = 0;
-        const exportTask = async (parentId, newParentId) => {
-            const parent = await localIndexedDBManager.getObjectById(parentId);
-            delete parent.id;
-            parent.collabName = data.name;
-            parent.parentId = newParentId;
-            parent.collabTaskId = ++currentCollabTaskId;
-
-            const createdParentId = await collabIndexedDBManager.addObject(parent);
-
-            const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
-                return Promise.all( children.map(child => exportTask( child.id, parent.collabTaskId )) );
-            });
-            return addChildrenPromise;
-        }; 
-
+ 
         // export whole task to collab store
-        await exportTask(taskIdFromRoute, -1);
-    
-        additionalInfo.value = "Collaboration created!";    
-        setTimeout(() => router.push("/collaborations"), 2000);
+        await migrateTaskTree(localIndexedDBManager, collabIndexedDBManager, data.name, taskIdFromRoute);
+        
+        const payload = {
+            collabName: data.name,
+            operationType: "init",
+            operation_part: 1, 
+            operation_max_part: 1 
+        };
+        
+        fetchPost("/api/operations/log", payload)
+        .then(operation => {
+            setCookie(`lastUpdate-${data.name}`, operation.createdAt, { path: '/', expires: 365 });
+            additionalInfo.value = "Collaboration created!";
+            setTimeout(() => router.push(`/collaborations/${data.name}`), 2000);
+        })
+        .catch(err => {
+            console.log("error while logging initial operation", err);
+        })
     })
     .catch(error => {
+        console.log(error);
         handleFetchError(error);
     })
     

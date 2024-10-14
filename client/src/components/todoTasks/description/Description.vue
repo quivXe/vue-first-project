@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify'
 import Debounce from '../../../utils/debounce';
 
 // TODO: style for task.name in header
+// TODO: make it responsive
 
 marked.use({
     breaks: true

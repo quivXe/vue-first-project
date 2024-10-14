@@ -1,7 +1,7 @@
 // /server/controllers/operationController.js
 const pusher = require('../config/pusher');
 const { Operation } = require('../models');
-const { Op } = require('sequelize');
+const { Op, col } = require('sequelize');
 
 /**
  * Log a new operation.
@@ -13,7 +13,7 @@ const { Op } = require('sequelize');
  * 
  * 201 - Request successful, sends created operation.
  * 
- * 422 - Invalid operationType. (available: 'add' | 'update' | 'delete')
+ * 422 - Invalid operationType. (available: 'add' | 'update' | 'delete' | 'init')
  * 
  * 500 - Internal error occured.
  * 
@@ -21,7 +21,7 @@ const { Op } = require('sequelize');
  * @param {Object} req - The request object containing the operation data.
  * @param {Object} req.body - The request body containing operation details.
  * @param {number} req.body.collabName - The name of the collaboration.
- * @param {string} req.body.operationType - The type of the operation ('add'|'update'|'delete').
+ * @param {string} req.body.operationType - The type of the operation ('add'|'update'|'delete'|'init').
  * @param {JSON} req.body.details - Additional details about the operation.
  * @param {number} req.body.operationIndex - The index of the operation in the sequence.
  * @param {number} req.body.operation_part - The part number of the operation.
@@ -44,7 +44,7 @@ const { Op } = require('sequelize');
 exports.logOperation = async (req, res) => {
   const { collabName, operationType, details, operation_part, operation_max_part, socket_id } = req.body;
 
-  if (operationType !== "add" && operationType !== "update" && operationType !== "delete") {
+  if (operationType !== "add" && operationType !== "update" && operationType !== "delete" && operationType !== "init") {
     res.status(422).json({error: 'Invalid operationType'});
     return;
   }
@@ -57,28 +57,36 @@ exports.logOperation = async (req, res) => {
       operation_max_part 
     });
 
-    const eventData = {type: operationType, details};
-    pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id }).catch(err => {
-      res.status(500).json({error: {pusherError: err}});
-      console.log(err);
-      return;
-    })
+    if (operationType !== "init") {
+      
+      /* -------------------- Send operation to pusher channel -------------------- */
+      const eventData = {type: operationType, details, timestamp: newOperation.createdAt};
+      pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id }).catch(err => {
+        res.status(500).json({ error: {pusherError: err} });
+        console.log(err);
+        return;
+      })
 
-    res.status(201).json(newOperation);
+    }
+    
+    return res.status(201).json(newOperation);
+    
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 /**
- * Get operations for a collaboration with operationIndex filter.
+ * Get operations for a collaboration with timestamp filter.
  *
  * This function retrieves all operations associated with a specified collaboration ID.
- * Optionally, it can filter operations based on the provided operation index.
+ * Optionally, it can filter operations based on the provided operation timestamp.
  * 
  * Handled response status codes:
  * 
  * 200 - Sends Array of operations for specified collaboration.
+ * 
+ * 410 - Request's timestamp is not in the database.
  * 
  * 500 - Internal error occured.
  * 
@@ -96,11 +104,16 @@ exports.getOperationsForCollab = async (req, res) => {
     // If timestamp is provided, filter operations based on it
     const conditions = { collabName };
     if (timestamp) {
-      conditions.timestamp = { [Op.gt]: timestamp }; // Greater than timestamp
+      // Check if timestamp is in the database
+      conditions.createdAt = { [Op.eq]: timestamp }; // Equal to timestamp
+      const operation = await Operation.findOne({ where: conditions });
+      if (!operation) return res.status(410).json({ error: 'Timestamp not in database' });
+
+      conditions.createdAt = { [Op.gt]: timestamp }; // Greater than timestamp
     }
     
     const operations = await Operation.findAll({ where: conditions });
-    res.status(200).json(operations);
+    res.status(200).json({ operations });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

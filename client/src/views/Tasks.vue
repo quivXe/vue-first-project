@@ -32,6 +32,8 @@ let collabManager = null;
 const uiManager = new UIManager();
 
 const managersLoaded = ref(false);
+const loadingText = ref("Loading...");
+
 const initializeManagers = async () => {
   // todo: if in collab, check if it exists if no, pusher ask for whole version
   try {
@@ -39,13 +41,13 @@ const initializeManagers = async () => {
     collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
     collaborating = collabName !== null;
 
+    /* ---------------------- Subscribing to pusher channel --------------------- */
     new Promise((resolve, reject) => {
       if (collaborating) {
         collabManager = new CollaborationManager(collabName);
   
         collabManager.subscribe()
         .then(() => {
-          console.log("subscription succeeded");
           resolve();
         })
         .catch((err) => {
@@ -65,14 +67,21 @@ const initializeManagers = async () => {
 
       // TASK MANAGER
       taskManager = new TaskManager(indexedDBManager, collabManager);
-      await taskManager.init();
 
       // BIND PUSHER
       if (collaborating) collabManager.bind(taskManager);
 
       // INITIALIZE UI MANAGER
       uiManager.init(taskManager);
+
+      // GET OPERATIONS FROM DATABASE
+      if (collaborating) {
+        await collabManager.getOperationsFromDatabase(taskManager, indexedDBManager);
+      }
   
+      // INITIALIZE TASK MANAGER
+      await taskManager.init();
+      
       // FINISH BY DISPLAYING UI
       managersLoaded.value = true;
     })
@@ -99,6 +108,7 @@ onMounted(async () => {
 })
 </script>
 <template>
+  <div v-if="!managersLoaded" class="loading-managers"> {{ loadingText }} </div>
   <div class="wrapper" v-if="managersLoaded">
 
     <div class="nav">
@@ -130,6 +140,7 @@ onMounted(async () => {
             :mouse-released-toggle="uiManager.mouseReleasedToggle"
             :_dragging="task.id === uiManager.draggedTask?.id"
             :change-name="uiManager.changingTaskName?.id === task.id"
+            :style="{ 'order': task.flexIndex }"
             @task-clicked="uiManager.taskClicked"
             @delete-task="uiManager.deleteTaskClicked"
             @mouse-over-task="uiManager.mouseOverTask"
