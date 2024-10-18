@@ -78,7 +78,6 @@ class CollaborationManager {
         })
     }
     send(type, details, others) {
-
         return new Promise((resolve, reject) => {
             
             if (type !== "add" && type !== "update" && type !== "delete") {
@@ -144,9 +143,9 @@ class CollaborationManager {
             for (let operation of data.operations) {
                 if (operation.operationType === "init") continue;
                 this.handleOperation(operation.operationType, JSON.parse(operation.details), taskManager);
-                timestamp = operation.timestamp;
+                timestamp = operation.createdAt;
             }
-            if (timestamp) setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
+            if (timestamp) setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
         .catch(async err => {
             if (err.status === 410) { // timestamp is not in the database

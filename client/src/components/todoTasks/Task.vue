@@ -81,6 +81,7 @@ function mouseOverContainer(task) {
 }
 function onInputTaskBlur() {
     if (inputTaskValue.value === "") return;
+    inputTaskValue.value = inputTaskValue.value.trim().slice(0, 500);
     if (props.changeName) emit("changeNameBlur", props.task, inputTaskValue.value);
     else if (props.createNew) emit("newTaskBlur", inputTaskValue.value);
 }

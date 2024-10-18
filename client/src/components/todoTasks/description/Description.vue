@@ -39,6 +39,7 @@ function showResult() {
     editing.value = false;
 }
 function onInput() {
+    descContent.value = descContent.value.slice(0, 2000);
     saving.value = true;
     delayedSave.run();
 }

@@ -20,11 +20,11 @@ class UIManager {
    * @constructor
    * @param {TaskManager} taskManager - An instance of TaskManager to manage tasks.
    */
-  constructor(taskManager) {
-    this.taskManager = taskManager;
+  constructor() {
+    this.taskManager;
     this.router = useRouter();
 
-    this._parentTree = ref([]);
+    // this._parentTree = ref([]);
     this._mouseReleasedToggle = ref(false);
     this._creatingNewTask = ref(false);
     this._showOptions = ref(false);
@@ -59,7 +59,9 @@ class UIManager {
    */
   init(taskManager) {
     this.taskManager = taskManager;
-    this._currentTasks = ref(this.taskManager.currentTasks);
+    this._currentTasks = this.taskManager.currentTasks;
+    this._parentTree = this.taskManager.parentTree;
+    console.log("init", this._parentTree.value);
   }
 
   get currentTasks() { return this._currentTasks.value; }

@@ -32,8 +32,9 @@ class TaskManager {
    * @constructor
    * @param {IndexedDBManager} indexedDBManager - An instance of IndexedDBManager to manage task storage.
    * @param {CollaborationManager} [collabManager=null] - An instance of CollaborationManager to send updates on collaboration.
+   * @param {Array<Task>} [parentTree=[]] - The parent tree of tasks. Defaults to empty array.
    */
-  constructor(indexedDBManager, collabManager=null) {
+  constructor(indexedDBManager, collabManager=null, parentTree=[]) {
     this.TASK_STATUSES = {
       TODO: 0,
       DOING: 1,
@@ -42,9 +43,11 @@ class TaskManager {
 
     this.indexedDBManager = indexedDBManager;
     this.collabManager = collabManager;
+    this.parentTree;
 
     this.collaborating = collabManager !== null;
     this.currentTasks = ref([]);
+    this.parentTree = ref(parentTree);
 
     // Binding methods to ensure correct context
     this.addTask = this.addTask.bind(this);
@@ -53,15 +56,18 @@ class TaskManager {
     this.retryOperation = this.retryOperation.bind(this);
   }
 
+  get currentParentId() {
+    return this.collaborating ? 
+      this.parentTree.value[this.parentTree.value.length - 1]?.collabTaskId || -1 :
+      this.parentTree.value[this.parentTree.value.length - 1]?.id || -1;
+  }
   /**
-   * Initializes the TaskManager by setting the current tasks for the provided parent ID..
+   * Initializes the TaskManager by updating current tasks based on the current parent.
    *
    * @async
-   * @param {number} [currentParentId=-1] - The parent ID for which to fetch tasks. Defaults to -1 (root).
    */
-  async init(currentParentId=-1) {
-    this.currentParentId = currentParentId;
-    await this.updateCurrentTasks({parentId: currentParentId});
+  async init() {
+    await this.updateCurrentTasks({parentId: this.currentParentId});
   }
 
   /**
@@ -78,14 +84,12 @@ class TaskManager {
         options.parentId :
         options.parent?.collabTaskId || -1;
       this.currentTasks.value = await this.indexedDBManager.getTasksByParentIdInCollab(this.collabManager.collabName, parentId);
-      this.currentParentId = parentId;
     }
     else {
       let parentId = options.parentId ?
         options.parentId :
         options.parent?.id || -1;
       this.currentTasks.value = await this.indexedDBManager.getTasksByParentId(parentId);
-      this.currentParentId = parentId;
     }
   }
 
@@ -193,7 +197,7 @@ class TaskManager {
     task.id = id;
   
     // Update current tasks if needed
-    if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);
+    if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);;
 
   }  /**
    * Removes a task from indexedDBManager.
@@ -205,7 +209,7 @@ class TaskManager {
    * @param {boolean} [options.fromUI] - Whether to send update to collaboration if in any.
    * 
    */
-  async removeTask(options) { // TODO: add error handling if user1 removes task and user2 tries to do anything in this task.
+  async removeTask(options) {
     const indexedDBManager = this.indexedDBManager;
     const taskManager = this;
 
@@ -246,7 +250,17 @@ class TaskManager {
       }
     }
 
-    if (task.parentId === this.currentParentId) {
+    // Update parent tree and current tasks
+    if (this.parentTree.value.find(t => t.collabTaskId === task.collabTaskId)) {
+
+      while (this.currentParentId !== task.collabTaskId) {
+        this.parentTree.value.pop();
+      }
+      this.parentTree.value.pop();
+
+      this.updateCurrentTasks({ parentId: task.parentId });
+    }
+    else if (task.parentId === this.currentParentId) {
       let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
       this.currentTasks.value = newCurrentTasks;
     }
@@ -357,11 +371,14 @@ class TaskManager {
     }
 
     // Update if needed
-    // TODO: updating doesnt work cuz UIManager stores parents so even if i could access currentParent (not id), it would work only if another user
-    // [...] changed description in the same parent or lower, otherwise (you are lower than user1) to update new description you would have to add
-    // [...] changed task yet again to the parent tree in UIManager.
-    // Maybe add function to UIManager that updates description,
-    // Or just move parent tree to TaskManager, it would also help with handling removing
+    if (!options.task && this.collaborating) {
+      let toUpdateTask = this.parentTree.value.find(t => t.collabTaskId === task.collabTaskId);
+      if (toUpdateTask) toUpdateTask.description = newDescription;
+      else {
+        let toUpdateTask = this.currentTasks.value.find(t => t.collabTaskId === task.collabTaskId);
+        if (toUpdateTask) toUpdateTask.description = newDescription;
+      }
+    } 
   }
 
   /**
@@ -385,7 +402,9 @@ class TaskManager {
 
     // For sending to collaboration
     let savedNewFlexIndex = options.newFlexIndex || options.draggedTask.flexIndex;
-    let newStatus = options.draggedTask?.status || options.newStatus;
+    let newStatus;
+    if (options.draggedTask) { newStatus = options.draggedTask.status; }
+    else { newStatus = options.newStatus; }
 
     // Get task
     let task;
@@ -454,7 +473,7 @@ class TaskManager {
 
     // Update if needed
     if (!options.draggedTask && task.parentId === this.currentParentId) {
-      this.updateCurrentTasks(this.currentParentId);
+      this.updateCurrentTasks({ parentId: this.currentParentId });
     }
   }
 

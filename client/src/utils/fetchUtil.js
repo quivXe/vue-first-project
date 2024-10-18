@@ -47,7 +47,9 @@ export async function fetchPost(url, payload) {
 
     if (!res.ok) {
         return res.json().then(errorData => {
-            throw new Error(errorData.error || "Unexpected error");
+            const error = new Error(errorData.error || "Unexpected error");
+            error.status = res.status;
+            throw error;
         });
     }
 
