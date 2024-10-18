@@ -103,7 +103,7 @@ async function onSubmit() {
         handleFetchError(new Error("collaboration with name already exists"));
         return;
     }
-
+    additionalInfo.value = "Loading...";
     fetchPost("/api/collaborations/create", payload)
     .then(async data => {
  

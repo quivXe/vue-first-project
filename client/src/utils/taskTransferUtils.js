@@ -34,5 +34,8 @@ export async function migrateTaskTree (localIndexedDBManager, collabIndexedDBMan
  * @returns {Promise<void>} A promise that resolves when all tasks have been added to the IndexedDB.
  */
 export async function importTasks (indexedDBManager, tasks) {
-    return Promise.all( tasks.map(task => indexedDBManager.addObject(task)) );
+    return Promise.all( tasks.map(task => {
+        delete task.id;
+        return indexedDBManager.addObject(task)
+    }) );
 }

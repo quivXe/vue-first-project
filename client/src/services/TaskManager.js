@@ -159,7 +159,24 @@ class TaskManager {
     const siblings = await this.getTasksByParentId(parentId);
     task.flexIndex = getMaxFlexIndex(siblings) + 2;
     
-    // TODO: check for session before applying changes to idb
+    // Send update to collaboration if needed.
+    if (this.collaborating && options.fromUI) {
+      console.log("sending add task");
+      try {
+        await this.collabManager.send(
+          "add",
+          {
+            value: task.name,
+            parentId: task.parentId,
+            collabTaskId: task.collabTaskId,
+          }
+        )
+      } catch(error) {
+        console.log("Failed to send add task", error);
+        return;
+      }
+    }
+    
     // Add to IndexedDB
     let id;
     try {
@@ -174,20 +191,6 @@ class TaskManager {
       }
     }
     task.id = id;
-    
-    // Send update to collaboration if needed.
-    if (this.collaborating && options.fromUI) {
-      console.log("sending add task");
-      this.collabManager.send(
-        "add",
-        {
-          value: task.name,
-          parentId: task.parentId,
-          collabTaskId: task.collabTaskId,
-        }
-      );
-
-    }
   
     // Update current tasks if needed
     if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);
@@ -215,6 +218,21 @@ class TaskManager {
     }
     const task = options.task || await this.getTaskById(options.taskId);
 
+    // Send to collab
+    if (this.collaborating && options.fromUI) {
+      try {
+        await this.collabManager.send(
+          "delete",
+          {
+            taskId: task.collabTaskId
+          }
+        );
+      } catch(err) {
+        console.log("Failed to send delete task", err);
+        return;
+      }
+    }
+
     // Remove from indexedDb
     try {
       await removeTaskWithChildren(task);
@@ -226,16 +244,6 @@ class TaskManager {
         console.log(retryError);
         return; // Retry failed
       }
-    }
-
-    // Send to collab
-    if (this.collaborating && options.fromUI) {
-      this.collabManager.send(
-        "delete",
-        {
-          taskId: task.collabTaskId
-        }
-      );
     }
 
     if (task.parentId === this.currentParentId) {
@@ -258,6 +266,24 @@ class TaskManager {
   async changeTaskName(options) {
     console.log(options.taskId);
     const task = options.task || await this.getTaskById(options.taskId);
+
+    // Send to collab
+    if (this.collaborating && options.fromUI) {
+      try {
+        await this.collabManager.send(
+          "update",
+          {
+            type: 'name',
+            taskId: task.collabTaskId,
+            newName: options.newName
+          }
+        );
+      } catch(error) {
+        console.log("Failed to send update to collab", error);
+        return;
+      }
+    }
+
     task.name = options.newName;
 
     // Update indexedDb
@@ -271,18 +297,6 @@ class TaskManager {
         console.log(retryError);
         return; // Retry failed
       }
-    }
-
-    // Send to collab
-    if (this.collaborating && options.fromUI) {
-      this.collabManager.send(
-        "update",
-        {
-          type: 'name',
-          taskId: task.collabTaskId,
-          newName: options.newName
-        }
-      );
     }
 
     // Update if needed
@@ -308,6 +322,25 @@ class TaskManager {
   async updateDescription(options) {
     const task = options.task || await this.getTaskById(options.taskId);
     const newDescription = options.newDescription;
+
+    // Send to collab
+    if (this.collaborating && options.fromUI) {
+      try {
+        await this.collabManager.send(
+          "update",
+          {
+            type: "description",
+            taskId: task.collabTaskId,
+            newDescription: newDescription
+          }
+        )
+      }
+      catch(err) {
+        console.log("Failed to update description", err);
+        return;
+      }
+    }
+
     task.description = newDescription;
 
     // Update indexedDb
@@ -321,18 +354,6 @@ class TaskManager {
         console.log(retryError);
         return; // Retry failed
       }
-    }
-
-    // Send to collab
-    if (this.collaborating && options.fromUI) {
-      this.collabManager.send(
-        "update",
-        {
-          type: "description",
-          taskId: task.collabTaskId,
-          newDescription: newDescription
-        }
-      )
     }
 
     // Update if needed
@@ -364,14 +385,34 @@ class TaskManager {
 
     // For sending to collaboration
     let savedNewFlexIndex = options.newFlexIndex || options.draggedTask.flexIndex;
+    let newStatus = options.draggedTask?.status || options.newStatus;
 
     // Get task
     let task;
     if (options.draggedTask) task = options.draggedTask;
     else {
       task = await this.getTaskById(options.draggedTaskId)
-      task.status = options.newStatus;
+      task.status = newStatus;
       task.flexIndex = options.newFlexIndex;
+    }
+
+    // Send to collab
+    if (this.collaborating && options.fromUI) {
+      try {
+        await this.collabManager.send(
+          "update",
+          {
+            type: "drag",
+            taskId: task.collabTaskId,
+            newStatus: newStatus,
+            newFlexIndex: savedNewFlexIndex
+          }
+        )
+      }
+      catch(error) {
+        console.log("Failed to send status to collaboration", error);
+        return;
+      }
     }
 
     // Get siblings
@@ -409,19 +450,6 @@ class TaskManager {
         console.log(retryError);
         return; // Retry failed
       }
-    }
-
-    // Send to collab
-    if (this.collaborating && options.fromUI) {
-      this.collabManager.send(
-        "update",
-        {
-          type: "drag",
-          taskId: task.collabTaskId,
-          newStatus: task.status,
-          newFlexIndex: savedNewFlexIndex
-        }
-      )
     }
 
     // Update if needed

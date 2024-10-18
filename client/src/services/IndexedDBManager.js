@@ -111,6 +111,19 @@ class IndexedDBManager {
     }
 
     /**
+     * Deletes all objects from the object store with the given collaboration name.
+     * @param {string} collabName - The name of the collaboration to delete objects from.
+     * @returns {Promise<void>} A promise that resolves when all objects have been deleted.
+     */
+    async deleteObjectsByCollabName(collabName) {
+        const tasks = await this.getTasksByCollabName(collabName);
+        const db = await this.dbPromise;
+        const tx = db.transaction(this.storeName, 'readwrite');
+        await Promise.all(
+            tasks.map( task => tx.store.delete(task.id) ).concat(tx.done)
+        );
+    }
+    /**
      * Retrieves all objects from the object store.
      * @returns {Promise<Array<Object>>} A promise that resolves with an array of all objects.
      */

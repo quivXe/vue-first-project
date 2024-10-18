@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch, ref } from 'vue'
+import { onMounted, watch, ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPusher } from '../services/pusherClient.js';
 
@@ -105,6 +105,9 @@ onMounted(async () => {
   await initializeManagers(route);
 
   document.addEventListener('mouseup', debouncedMouseUp.run);
+});
+onUnmounted(() => {
+  if (collaborating) collabManager.disconnect(); // Disconnect pusher to prevent bugs
 })
 </script>
 <template>

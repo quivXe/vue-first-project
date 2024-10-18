@@ -34,12 +34,14 @@ const openForResponse = {}; // TODO: maybe later add it to memcache
  */
 exports.requestCurrentVersionController = async (req, res) => {
     const { type, collabName, socket_id } = req.body;
+
     // collabName, socket_id, ready, tasks
     if (!type || !collabName || !socket_id) return res.status(400).json({ error: "Bad Request" });
 
 
     /* -------------------- User wants to get current version ------------------- */
     if (type === "get-current-version") {
+        console.log("requesting socket_id", socket_id);
         if (openForResponse[collabName]) return res.status(200).json({ ok: true, message: "Someone is already asking for current version" });
 
         /* ------------------- Give access to establish connection ------------------ */
@@ -65,9 +67,6 @@ exports.requestCurrentVersionController = async (req, res) => {
                 const data = await pusherRes.json();
                 const subscriptionCount = data.channels[`private-${collabName}`].subscription_count;
     
-                console.log("--------------------------------------------------");
-                console.log(`Subscription count: ${subscriptionCount}`);
-                console.log("--------------------------------------------------");
                 if (subscriptionCount <= 1) { // Speeds up response, if noone is really online
                     clearTimeout(openForResponse[collabName].timeout);
                     delete openForResponse[collabName];

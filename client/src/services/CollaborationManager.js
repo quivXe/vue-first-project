@@ -23,6 +23,10 @@ class CollaborationManager {
         })
     }
 
+    disconnect() {
+        this.pusher.disconnect();
+    }
+
     /**
      * 
      * @param {TaskManager} taskManager 
@@ -40,9 +44,9 @@ class CollaborationManager {
             setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
 
-        // Answer for asking for current tasks version
+        /* --------------- Answer for asking for current tasks version -------------- */
         this.pusher.bind("asked-for-current-version", () => {
-            console.log("asked for current version");
+            console.log("someone asked for current version with socket_id", this.pusher.connection.socket_id);
             const payload = {
                 type: "establish-connection",
                 collabName: this.collabName,
@@ -74,29 +78,36 @@ class CollaborationManager {
         })
     }
     send(type, details, others) {
-        if (type !== "add" && type !== "update" && type !== "delete") {
-            return;
-        }
 
-        const operation_part = 1;
-        const operation_max_part = 1;
-        const payload = {
-            collabName: this.collabName,
-            operationType: type,
-            details,
-            operation_part,
-            operation_max_part,
-            socket_id: this.pusher.connection.socket_id,
-        }
+        return new Promise((resolve, reject) => {
+            
+            if (type !== "add" && type !== "update" && type !== "delete") {
+                reject("Provide corrent type (add | update | delete)");
+            }
+    
+            const operation_part = 1;
+            const operation_max_part = 1;
+            const payload = {
+                collabName: this.collabName,
+                operationType: type,
+                details,
+                operation_part,
+                operation_max_part,
+                socket_id: this.pusher.connection.socket_id,
+            }
+    
+            fetchPost("/api/operations/log", payload)
+            .then(data => {
+                console.log("logging output", data);
+                let timestamp = data.createdAt;
+                setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
+                resolve();
+            })
+            .catch(err => {
+                this.handleError(err); // TODO: redirect if session passed
+                reject(err);
+            })
 
-        fetchPost("/api/operations/log", payload)
-        .then(data => {
-            console.log("logging output", data);
-            let timestamp = data.createdAt;
-            setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
-        })
-        .catch(err => {
-            this.handleError(err);
         })
     }
 
@@ -110,7 +121,7 @@ class CollaborationManager {
         }
     }
 
-    async getOperationsFromDatabase(taskManager, collabIndexedDBManager) { // TODO: deleting and updating doesnt seem to work 
+    async getOperationsFromDatabase(taskManager, collabIndexedDBManager) {
         const lastUpdate = getCookie(`lastUpdate-${this.collabName}`);
 
         /* -- If there is no last update (first time launching this collaboration), - */
@@ -129,10 +140,13 @@ class CollaborationManager {
         fetchPost("/api/operations/get", payload)
         .then(data => {
             console.log(data);
+            let timestamp = null;
             for (let operation of data.operations) {
                 if (operation.operationType === "init") continue;
                 this.handleOperation(operation.operationType, JSON.parse(operation.details), taskManager);
+                timestamp = operation.timestamp;
             }
+            if (timestamp) setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
         })
         .catch(async err => {
             if (err.status === 410) { // timestamp is not in the database
@@ -144,7 +158,7 @@ class CollaborationManager {
         })
     }
     requestCurrentVersion(collabIndexedDBManager) {
-
+        console.log("requested current version with socket_id", this.pusher.connection.socket_id);
         return new Promise((mainResolve, mainReject) => {
 
             const payload = {
@@ -184,6 +198,7 @@ class CollaborationManager {
 
                 setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
                 const tasks = data.tasks;
+                await collabIndexedDBManager.deleteObjectsByCollabName(this.collabName);
                 await importTasks(collabIndexedDBManager, tasks);
                 mainResolve(data);
             })
