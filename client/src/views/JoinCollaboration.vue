@@ -3,6 +3,7 @@ import { handleError, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchPost } from '../utils/fetchUtil';
 import Debounce from '../utils/debounce';
+import { handleFetchError } from '../utils/handleErrorUtil';
 
 const route = useRoute();
 const router = useRouter();
@@ -13,29 +14,6 @@ const collabName = ref(route.params.collaborationName || '');
 const password = ref('');
 const additionalInfo = ref('');
 
-function handleFetchError(error) {
-    console.warn(error);
-
-    let output;
-    if (error.type === "not-json-response") {
-        output = error.message;
-    }
-    else if (error.response && error.response.status) {
-        switch (error.response.status) {
-            case 400:
-                output = "Wrong collaboration's name or password.";
-                break;
-            default:
-                output = "An unexpected error happened.";
-                break;
-        }
-    } else {
-        output = "Network error. Please check your connection."
-    }
-    additionalInfo.value = output;
-    debouncedResetAdditionalInfo.run();
-}
-
 function onSubmit() {
 
     const payload = {
@@ -43,14 +21,15 @@ function onSubmit() {
         password: password.value
     };
     
-    fetchPost('/api/collaborations/join', payload)
+    const url = '/api/collaborations/join'
+    fetchPost(url, payload)
     .then(data => {
         collabName.value = '';
         password.value = '';
         router.push(`/collaborations/${data.name}`);
     })
     .catch(error => {
-        handleFetchError(error);
+        handleFetchError({ url, statusCode: error.status });
     });
 }
 

@@ -2,6 +2,7 @@ import { getPusher } from "./pusherClient";
 import { fetchPost } from '../utils/fetchUtil';
 import { setCookie, getCookie } from "../utils/cookieUtils";
 import { importTasks } from "../utils/taskTransferUtils";
+import { handleFetchError } from "../utils/handleErrorUtil";
 
 class CollaborationManager {
     constructor(collabName) {
@@ -52,7 +53,8 @@ class CollaborationManager {
                 collabName: this.collabName,
                 socket_id: this.pusher.connection.socket_id
             }
-            fetchPost("/api/request-current", payload)
+            const url = "/api/request-current";
+            fetchPost(url, payload)
             .then(async () => { // connection established
 
                 // Get local tasks
@@ -65,15 +67,17 @@ class CollaborationManager {
                     tasks: tasksInCollab,
                     timestamp: getCookie(`lastUpdate-${this.collabName}`)
                 }
-                fetchPost("/api/request-current", payload)
+                fetchPost(url, payload)
                 .catch(err => { // something went wrong
                     console.log(err);
+                    handleFetchError({ url: url, statusCode: err.status });
                 })
                 
                 
             })
             .catch(err => { // someone was first or something went wrong
                 console.log(err);
+                handleFetchError({ url: url, statusCode: err.status });
             })
         })
     }
@@ -95,29 +99,18 @@ class CollaborationManager {
                 socket_id: this.pusher.connection.socket_id,
             }
     
-            fetchPost("/api/operations/log", payload)
+            const url = "/api/operations/log";
+            fetchPost(url, payload)
             .then(data => {
-                console.log("logging output", data);
                 let timestamp = data.createdAt;
                 setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
                 resolve();
             })
             .catch(err => {
-                this.handleError(err); // TODO: redirect if session passed
-                reject(err);
+                reject({ err, url });
             })
 
         })
-    }
-
-    handleError(err) {
-        switch (err.status) {
-            case 422:
-                console.warn("Invalid operationType");
-                break;
-            default:
-                console.log(err);
-        }
     }
 
     async getOperationsFromDatabase(taskManager, collabIndexedDBManager) {
@@ -136,9 +129,9 @@ class CollaborationManager {
             timestamp: lastUpdate
         }
 
-        fetchPost("/api/operations/get", payload)
+        const url = "/api/operations/get";
+        fetchPost(url, payload)
         .then(data => {
-            console.log(data);
             let timestamp = null;
             for (let operation of data.operations) {
                 if (operation.operationType === "init") continue;
@@ -148,6 +141,9 @@ class CollaborationManager {
             if (timestamp) setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
         .catch(async err => {
+            handleFetchError({ url: url, statusCode: err.status });
+
+            // TODO: make requestCurrentVersion in handleError.
             if (err.status === 410) { // timestamp is not in the database
                 console.log("timestamp is not in the database");
                 await this.requestCurrentVersion(collabIndexedDBManager);
@@ -190,10 +186,6 @@ class CollaborationManager {
                 
             })
             .then(async data => {
-                console.log("--------------------------------------------------");
-                console.log("Current version:");
-                console.log(data);
-                console.log("--------------------------------------------------");
 
                 setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
                 const tasks = data.tasks;
@@ -202,6 +194,7 @@ class CollaborationManager {
                 mainResolve(data);
             })
             .catch(err => {
+                // TODO: here too, add handleError to promise handling where its used
                 if (err.nooneOnline) {
                     console.log("Noone to provide current version");
                     

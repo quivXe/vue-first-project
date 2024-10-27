@@ -1,7 +1,11 @@
 <script setup>
+
+import Notification from './components/Notification.vue';
+
 // TODO: add event for every child, which will be used for sending popups after redirections (like your session expired)
 </script>
 <template>
+  <Notification />
   <div class="header">
     <div class="logo">
       <router-link to="/"><img src="@/assets/images/logo.svg" alt="Logo"></router-link>
@@ -29,8 +33,10 @@
       </ul>
     </div>
   </div>
-  <div class="router-view-container">
-    <router-view></router-view>
+  <div class="main-container">
+    <div class="router-view">
+      <router-view></router-view>
+    </div>
   </div>
   <div class="footer"></div>
 </template>
@@ -98,10 +104,16 @@
 
 
 
-  .router-view-container
+  .main-container
     background-color: common.$bg-color
     width: 100%
     height: calc(100vh - common.$header-height)
+
+    // position: relative
+
+    .router-view
+      width: 100%
+      height: 100%
     
   .footer
     display: none

@@ -11,13 +11,9 @@ const pusher = require('../config/pusher');
  * 
  * Handled response status codes:
  * 
- * 200 - Request successful; returns the authorization data for the channel.
- * 
- * 400 - Bad Request; either socket_id or channel_name is missing.
- * 
- * 401 - Unauthorized from middleware.
- * 
- * 500 - Internal Server Error; session not initialized or other internal error occurred.
+ * - 200 - Request successful; returns the authorization data for the channel.
+ * - 400 - Invalid request body.
+ * - 500 - Internal Server Error
  * 
  * @async
  * @param {Object} req - The request object containing the request data.
@@ -30,10 +26,14 @@ const pusher = require('../config/pusher');
  */
 exports.channelAuth = async (req, res) => {
     const { socket_id, channel_name } = req.body;
-
-    if (!socket_id || !channel_name) {
-        return res.status(400).json({ error: 'Bad Request: Either socket_id or channel_name is missing.' });
+    try {
+        if (!socket_id || !channel_name) {
+            return res.status(400).json({ error: 'Invalid request body' });
+        }
+        const auth = pusher.authorizeChannel(socket_id, channel_name);
+        return res.status(200).json(auth);
+    } catch(err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
-    const auth = pusher.authorizeChannel(socket_id, channel_name);
-    return res.status(200).json(auth);
 };

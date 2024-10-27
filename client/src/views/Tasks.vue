@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, watch, ref, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getPusher } from '../services/pusherClient.js';
+import { useRoute } from 'vue-router'
 
 import {
   AddTaskButton,
@@ -19,9 +18,9 @@ import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
 import CollaborationManager from '../services/CollaborationManager.js'
 import Debounce from '../utils/debounce.js';
+import { handleFetchError } from '../utils/handleErrorUtil.js';
 
 
-const router = useRouter();
 const route = useRoute();
 let collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
 let collaborating = collabName !== null;
@@ -34,8 +33,14 @@ const uiManager = new UIManager();
 const managersLoaded = ref(false);
 const loadingText = ref("Loading...");
 
+function tempNotification() {
+  console.log("notification sent");
+  const event = new CustomEvent('show-notification', {
+    detail: "This is a sample text to demonstrate how to break the text into lines based on a maximum character limit. A longerwo rdthatneeds tobebroken should also work."
+  });
+  window.dispatchEvent(event);
+}
 const initializeManagers = async () => {
-  // todo: if in collab, check if it exists if no, pusher ask for whole version
   try {
     // has to create new cuz it wasnt refreshed 
     collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
@@ -51,10 +56,7 @@ const initializeManagers = async () => {
           resolve();
         })
         .catch((err) => {
-          console.log(err); // Object { type: "AuthError", error: "Unable to retrieve auth string from channel-authorization endpoint - received status: 401 from /api/pusher/channel-auth. Clients must be authorized to join private or presence channels. See: https://pusher.com/docs/channels/server_api/authorizing-users/", status: 401 }
-          // OR ERROR 500 if session not initialized
-          router.push("/join"); // TODO: add popup
-          reject();
+          reject(err);
         });
       } else {
         collabManager = null;
@@ -85,10 +87,18 @@ const initializeManagers = async () => {
       // FINISH BY DISPLAYING UI
       managersLoaded.value = true;
     })
+    .catch((err) => { // Catch subscribing pusher promise
+      handleFetchError({ url: "/api/pusher/channel-auth", statusCode: err.status })
+    });
 
   }
-  catch(error) {
+  catch(error) { // Catch initializing managers `TRY`
     console.log("Error during loading managers:", error);
+    window.dispatchEvent(
+      new CustomEvent('show-notification', {
+        detail: "Something went wrong, please log in again."
+      })
+    )
   }
 }
 
@@ -125,7 +135,7 @@ onUnmounted(() => {
     </div>
     <div class="main">
       <div class="columns">
-        <div @click="collabManager.requestCurrentVersion">TEMP REQUEST</div>
+        <div @click="tempNotification">TEMP REQUEST</div>
         <Column
           v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
           :key="taskStatusNumber"
@@ -202,7 +212,16 @@ onUnmounted(() => {
     left: 0
     height: 100vh
     width: 100%
-    z-index: 8888
+    z-index: 888
+
+  .loading-managers
+    display: flex
+    justify-content: center
+    align-items: center
+    height: common.$main-height
+    color: white
+    font-weight: bold
+    font-size: 1.5em
 
   .nav
     display: flex
@@ -235,7 +254,7 @@ onUnmounted(() => {
       position: absolute
       right: 0
 
-      z-index: 9999
+      z-index: 999
 
       height: 100%
       

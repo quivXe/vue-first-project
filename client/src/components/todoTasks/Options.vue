@@ -29,7 +29,7 @@ const props = defineProps({
     position: absolute
     top: 50%
     left: 50%
-    z-index: 9999
+    z-index: 999
     transform: translate(-50%, -50%)
 
     background-color: common.$options-bg

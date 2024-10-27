@@ -2,6 +2,18 @@ import { toRaw, ref } from 'vue';
 import IndexedDBManager from './IndexedDBManager';
 import CollaborationManager from './CollaborationManager';
 import { generateUUID } from '../utils/uuid';
+import { handleFetchError } from '../utils/handleErrorUtil';
+
+function handleIdbError(text, error) {
+  window.dispatchEvent(
+    new CustomEvent('show-notification', {
+        detail: "Something went wrong, please try again."
+    })
+  );
+
+  console.log(text);
+  console.warn(error);
+};
 
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
@@ -165,7 +177,6 @@ class TaskManager {
     
     // Send update to collaboration if needed.
     if (this.collaborating && options.fromUI) {
-      console.log("sending add task");
       try {
         await this.collabManager.send(
           "add",
@@ -175,8 +186,10 @@ class TaskManager {
             collabTaskId: task.collabTaskId,
           }
         )
-      } catch(error) {
-        console.log("Failed to send add task", error);
+      } catch({err, url}) {
+        console.log("Failed to send add task", err);
+        console.log(url, err.status);
+        handleFetchError({ url: url, statusCode: err.status });
         return;
       }
     }
@@ -186,11 +199,10 @@ class TaskManager {
     try {
       id = await this.indexedDBManager.addObject(task);
     } catch (error) {
-      console.log("Failed to add task to indexedDB", error);
       try {
         id = await this.retryOperation(() => this.indexedDBManager.updateObject(toRaw(task)));
       } catch (retryError) {
-        console.log(retryError);
+        handleIdbError("Failed to add task in indexedDB", error);
         return; // Retry failed
       }
     }
@@ -231,8 +243,9 @@ class TaskManager {
             taskId: task.collabTaskId
           }
         );
-      } catch(err) {
+      } catch({err, url}) {
         console.log("Failed to send delete task", err);
+        handleFetchError({ url: url, statusCode: err.status });
         return;
       }
     }
@@ -241,11 +254,10 @@ class TaskManager {
     try {
       await removeTaskWithChildren(task);
     } catch (error) {
-      console.log("Failed to remove task from indexedDB", error);
       try {
         this.retryOperation(() => removeTaskWithChildren(task));
       } catch (retryError) {
-        console.log(retryError);
+        handleIdbError("Failed to remove task from indexedDB", error);
         return; // Retry failed
       }
     }
@@ -292,8 +304,9 @@ class TaskManager {
             newName: options.newName
           }
         );
-      } catch(error) {
-        console.log("Failed to send update to collab", error);
+      } catch({err, url}) {
+        console.log("Failed to send update to collab", err);
+        handleFetchError({ url: url, statusCode: err.status });
         return;
       }
     }
@@ -304,11 +317,10 @@ class TaskManager {
     try {
       await this.indexedDBManager.updateObject(toRaw(task));
     } catch (error) {
-      console.log("Failed to change task name", error);
       try {
         this.retryOperation(() => this.indexedDBManager.updateObject(toRaw(task)));
       } catch (retryError) {
-        console.log(retryError);
+        handleIdbError("Failed to change task name", error);
         return; // Retry failed
       }
     }
@@ -349,8 +361,9 @@ class TaskManager {
           }
         )
       }
-      catch(err) {
-        console.log("Failed to update description", err);
+      catch({err, url}) {
+        console.log("Failed to send update description", err);
+        handleFetchError({ url: url, statusCode: err.status });
         return;
       }
     }
@@ -361,11 +374,10 @@ class TaskManager {
     try {
       await this.indexedDBManager.updateObject(toRaw(task));
     } catch (error) {
-      console.log("Failed to update description", error);
       try {
         this.retryOperation(() => this.indexedDBManager.updateObject(toRaw(task)));
       } catch (retryError) {
-        console.log(retryError);
+        handleIdbError("Failed to update task description", error);
         return; // Retry failed
       }
     }
@@ -428,8 +440,9 @@ class TaskManager {
           }
         )
       }
-      catch(error) {
-        console.log("Failed to send status to collaboration", error);
+      catch({err, url}) {
+        console.log("Failed to send status to collaboration", err);
+        handleFetchError({ url: url, statusCode: err.status });
         return;
       }
     }
@@ -462,11 +475,10 @@ class TaskManager {
     try {
       await this.indexedDBManager.batchUpdate(toRaw(toUpdate));
     } catch (error) {
-      console.log("Failed to update status", error);
       try {
         this.retryOperation(() => this.indexedDBManager.batchUpdate(toRaw(toUpdate)));
       } catch (retryError) {
-        console.log(retryError);
+        handleIdbError("Failed to update task status", error);
         return; // Retry failed
       }
     }
@@ -488,7 +500,7 @@ class TaskManager {
    * @throws {Error} Throws an error if all retry attempts fail.
    * @template T
    */
-  async retryOperation(operation, retries = 0, delay = 1000) { // TODO: change retry to 3
+  async retryOperation(operation, retries = 3, delay = 1000) {
     let attempt = 0;
     while (attempt < retries) {
       try {

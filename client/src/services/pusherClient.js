@@ -19,7 +19,7 @@ export function getPusher() {
         });
     }
     catch (error) {
-        console.warn("Error while creating Pusher instance.", error);
+        console.warn("Error while creating Pusher instance.", error); // TODO: handle this somehow
         throw error;
     }
 }

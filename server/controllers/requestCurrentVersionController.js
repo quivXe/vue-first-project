@@ -13,15 +13,15 @@ const openForResponse = {}; // TODO: maybe later add it to memcache
  *
  * Handled response status codes:
  * 
- * 200 - Request successful; returns the authorization data for the channel.
+ * - 200 - Request successful - { ok: boolean, message: "Someone is already asking for current version" | "Noone to provide current version" | "Someone may provide current version" }
+ * - 400 - Invalid request body.
+ * - 409 - Data has already been provided / Establish connection first
+ * - 500 - Internal Server Error; session not initialized or other internal error occurred.
  * 
- * 400 - Bad Request; either socket_id or channel_name is missing.
+ * Pusher events:
  * 
- * 401 - Unauthorized from middleware.
- * 
- * 409 - Data has already been provided.
- * 
- * 500 - Internal Server Error; session not initialized or other internal error occurred.
+ * - "get-current-version" - message: { ok: boolean, nooneOnline: boolean }
+ * - "asked-for-current-version" - message: {  }
  *
  * @param {Object} req - The request object containing the request data.
  * @param {string} req.body.type - The type of the request. One of "get-current-version", "establish-connection", "send-current-version".
@@ -36,12 +36,11 @@ exports.requestCurrentVersionController = async (req, res) => {
     const { type, collabName, socket_id } = req.body;
 
     // collabName, socket_id, ready, tasks
-    if (!type || !collabName || !socket_id) return res.status(400).json({ error: "Bad Request" });
+    if (!type || !collabName || !socket_id) return res.status(400).json({ error: "Invalid request body" });
 
 
     /* -------------------- User wants to get current version ------------------- */
     if (type === "get-current-version") {
-        console.log("requesting socket_id", socket_id);
         if (openForResponse[collabName]) return res.status(200).json({ ok: true, message: "Someone is already asking for current version" });
 
         /* ------------------- Give access to establish connection ------------------ */
@@ -87,7 +86,6 @@ exports.requestCurrentVersionController = async (req, res) => {
     /* ----- User wants to establish connection for sending current version ----- */
     else if (type === "establish-connection") {
 
-        console.log("socket id while establishing:", socket_id);
         if (openForResponse[collabName]?.isOpen) {
             openForResponse[collabName].isOpen = false; 
             openForResponse[collabName].socket_id = socket_id;
@@ -103,7 +101,7 @@ exports.requestCurrentVersionController = async (req, res) => {
         if (socket_id !== openForResponse[collabName].socket_id) return res.status(401).json({ error: "Wrong socket_id" });
 
         const { tasks, timestamp } = req.body;
-        if (!tasks || !timestamp) return res.status(400).json({ error: "Bad Request" });
+        if (!tasks || !timestamp) return res.status(400).json({ error: "Invalid request body" });
 
         pusher.trigger(`private-${collabName}`, 'get-current-version', { ok: true, tasks, timestamp }, { socket_id }); // TODO: split it if needed, compress it
         clearTimeout(openForResponse[collabName].timeout);

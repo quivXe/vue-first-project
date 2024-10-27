@@ -48,3 +48,20 @@ export function getCookie(name) {
     
     return null; // Cookie not found
 }
+
+/**
+ * Removes a cookie by setting its expiration date to the past.
+ * 
+ * @param {string} name - The name of the cookie to remove.
+ * @param {Object} [options] - Optional cookie attributes like path and domain for proper deletion.
+ * @param {string} [options.path] - Path where the cookie is accessible.
+ * @param {string} [options.domain] - Domain where the cookie is accessible.
+ */
+export function removeCookie(name, options = {}) {
+    // Set the cookie expiration date to the past to delete it
+    setCookie(name, '', { 
+        expires: -1, // Expire the cookie immediately
+        path: options.path, 
+        domain: options.domain 
+    });
+}

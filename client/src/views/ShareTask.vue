@@ -6,6 +6,7 @@ import { fetchPost } from '../utils/fetchUtil';
 import Debounce from '../utils/debounce'
 import { migrateTaskTree } from '../utils/taskTransferUtils';
 import { setCookie } from '../utils/cookieUtils';
+import { handleFetchError } from '../utils/handleErrorUtil';
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
 const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
@@ -59,29 +60,6 @@ function filterName() {
     }
 }
 
-function handleFetchError(error) {
-    // TODO: handle more errors
-    // TODO: ensure response status codes are correct
-    // TODO: move it to utils and add parameter with endpoint
-    let output;
-    if (error.response && error.response.status) {
-        switch(error.response.status) {
-            case 401:
-                output = "This collaboration name is already taken.";
-                break
-            case 422:
-                output = "Invalid collaboration name."
-            default:
-                output = "An unexpected error happened.";
-                break;
-        };
-    } else {
-        output = "Network error. Please check your connection."
-    }
-    additionalInfo.value = output;
-    debouncedResetAdditionalInfo.run();
-}
-
 async function validateAndGetPayload() {
     filterName();
     let name = collabName.value.trim();
@@ -120,16 +98,21 @@ async function onSubmit() {
         fetchPost("/api/operations/log", payload)
         .then(operation => {
             setCookie(`lastUpdate-${data.name}`, operation.createdAt, { path: '/', expires: 365 });
-            additionalInfo.value = "Collaboration created!";
-            setTimeout(() => router.push(`/collaborations/${data.name}`), 2000);
+            window.dispatchEvent(
+                new CustomEvent('show-notification', {
+                    detail: "Collaboration created! Redirecting..."
+                })
+            );
+            setTimeout(() => router.push(`/collaborations/${data.name}`), 1000);
         })
         .catch(err => {
             console.log("error while logging initial operation", err);
+            handleFetchError({ url: "/api/operations/log", statusCode: err.status });
         })
     })
     .catch(error => {
         console.log(error);
-        handleFetchError(error);
+        handleFetchError({ url: "/api/collaborations/create", statusCode: error.status });
     })
     
 }

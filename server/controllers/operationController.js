@@ -1,7 +1,7 @@
 // /server/controllers/operationController.js
 const pusher = require('../config/pusher');
 const { Operation } = require('../models');
-const { Op, col } = require('sequelize');
+const { Op } = require('sequelize');
 
 /**
  * Log a new operation.
@@ -11,11 +11,10 @@ const { Op, col } = require('sequelize');
  * 
  * Handled response status codes:
  * 
- * 201 - Request successful, sends created operation.
- * 
- * 422 - Invalid operationType. (available: 'add' | 'update' | 'delete' | 'init')
- * 
- * 500 - Internal error occured.
+ * - 201 - Request successful, sends created operation.
+ * - 400 - Invalid request body.
+ * - 422 - Invalid operationType. (available: 'add' | 'update' | 'delete' | 'init')
+ * - 500 - Internal error occured.
  * 
  * @async
  * @param {Object} req - The request object containing the operation data.
@@ -38,11 +37,16 @@ const { Op, col } = require('sequelize');
  *   "details": {taskId: 5, parentId: 1},
  *   "operation_part": 1,
  *   "operation_max_part": 3,
- *   "socket_id": 101010.101010
+ *   "socket_id": "101010.101010"
  * }
  */
 exports.logOperation = async (req, res) => {
   const { collabName, operationType, details, operation_part, operation_max_part, socket_id } = req.body;
+
+  if (!collabName || !operationType || !details || !operation_part || !operation_max_part || !socket_id) {
+    res.status(400).json({ error: 'Invalid request body' });
+    return;
+  }
 
   if (operationType !== "add" && operationType !== "update" && operationType !== "delete" && operationType !== "init") {
     res.status(422).json({error: 'Invalid operationType'});
@@ -79,16 +83,15 @@ exports.logOperation = async (req, res) => {
 /**
  * Get operations for a collaboration with timestamp filter.
  *
- * This function retrieves all operations associated with a specified collaboration ID.
+ * This function retrieves all operations associated with a specified collaboration.
  * Optionally, it can filter operations based on the provided operation timestamp.
  * 
  * Handled response status codes:
  * 
- * 200 - Sends Array of operations for specified collaboration.
- * 
- * 410 - Request's timestamp is not in the database.
- * 
- * 500 - Internal error occured.
+ * - 200 - Sends Array of operations for specified collaboration.
+ * - 400 - Invalid request body.
+ * - 410 - Request's timestamp is not in the database.
+ * - 500 - Internal error occured.
  * 
  * @async
  * @param {Object} req - The request object containing the filter criteria.
@@ -99,6 +102,11 @@ exports.logOperation = async (req, res) => {
  */
 exports.getOperationsForCollab = async (req, res) => {
   const { collabName, timestamp } = req.body;
+
+  if (!collabName) {
+    res.status(400).json({ error: 'Invalid request body' });
+    return;
+  }
 
   try {
     // If timestamp is provided, filter operations based on it

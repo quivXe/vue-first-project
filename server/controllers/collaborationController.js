@@ -13,13 +13,11 @@ require('dotenv').config();
  * 
  * Handled response status codes:
  * 
- * 201 - Request successful, sends {name: {collaboration.name}}.
- * 
- * 409 - Collaboration with specified name already exists
- * 
- * 422 - Name or password contains invalid character or name is too long
- * 
- * 500 - Internal error occured.
+ * - 201 - Request successful, sends {name: {collaboration.name}}.
+ * - 400 - Invalid request body.
+ * - 409 - Collaboration with specified name already exists
+ * - 422 - Name or password contains invalid character or name is too long
+ * - 500 - Internal error occured.
  * 
  * @async
  * @param {Object} req - The request object containing the request data.
@@ -33,18 +31,24 @@ require('dotenv').config();
 exports.createCollaboration = async (req, res) => {
   const { name, password } = req.body;
   try {
-    // Define a regular expression to allow only valid characters
-    const allowedCharacters = /^[a-zA-Z0-9_\-=@,.;]+$/;
 
-    // Validate the 'name' and 'password' fields for illegal characters
-    if (!allowedCharacters.test(name) || !allowedCharacters.test(password)) {
-      res.status(422).json({ error: 'Invalid characters in name or password. Only letters, numbers, and _ - = @ , . ; are allowed' });
+    if (!name || !password) {
+      res.status(400).json({ error: 'Invalid request body' });
       return;
     }
+
+    // Define a regular expression to allow only valid characters
+    const allowedCharacters = /^[a-zA-Z0-9_\-=@,.;]+$/;
 
     // Validate length
     if (name.length > 156) {
       res.status(422).json({ error: 'Name length cannot be longer than 156' });
+      return;
+    }
+
+    // Validate the 'name' and 'password' fields for illegal characters
+    if (!allowedCharacters.test(name) || !allowedCharacters.test(password)) {
+      res.status(422).json({ error: 'Invalid characters in name or password. Only letters, numbers, and _ - = @ , . ; are allowed' });
       return;
     }
 
@@ -75,17 +79,14 @@ exports.createCollaboration = async (req, res) => {
  *
  * This function checks if a collaboration with the specified name exists 
  * and validates the provided password against the stored password. 
- * If validation is successful, it allows the user to join the collaboration.
+ * If validation is successful, it allows the user to join the collaboration with session.
  * 
  * Handled response status codes:
  * 
- * 200 - Request success, session set.
- * 
- * 400 - Invalid request body.
- * 
- * 401 - Name or password incorrect.
- * 
- * 500 - If an internal error occurs while joining the collaboration.
+ * - 200 - Request success, session set.
+ * - 400 - Invalid request body.
+ * - 401 - Name or password incorrect.
+ * - 500 - If an internal error occurs while joining the collaboration.
  *
  * @async
  * @param {Object} req - The request object containing the request data.
