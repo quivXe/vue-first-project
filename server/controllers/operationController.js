@@ -43,7 +43,12 @@ const { Op } = require('sequelize');
 exports.logOperation = async (req, res) => {
   const { collabName, operationType, details, operation_part, operation_max_part, socket_id } = req.body;
 
-  if (!collabName || !operationType || !details || !operation_part || !operation_max_part || !socket_id) {
+  if (!collabName || !operationType || !details || !operation_part || !operation_max_part) {
+    res.status(400).json({ error: 'Invalid request body' });
+    return;
+  }
+
+  if (operationType !== "init" && !socket_id) {
     res.status(400).json({ error: 'Invalid request body' });
     return;
   }

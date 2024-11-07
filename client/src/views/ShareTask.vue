@@ -46,6 +46,7 @@ function filterName() {
 
     // Allowed characters: letters, numbers, _ - = @ , . ;
     // Maximum length: 156
+    // TODO: add info that user used not allowed character
 
     if (collabName.value.length > 156) {
         collabName.value = collabName.value.slice(0, 156);
@@ -91,6 +92,7 @@ async function onSubmit() {
         const payload = {
             collabName: data.name,
             operationType: "init",
+            details: {},
             operation_part: 1, 
             operation_max_part: 1 
         };
@@ -116,74 +118,109 @@ async function onSubmit() {
     })
     
 }
-
-/*
-
-- get task id DONE
-- (maybe) check if task exists DONE
-- if so, get collab name and password from form DONE
-- send collab name and password to server DONE
-- handle response (name taken or unexpected error) DONE
-- if everything is right, connect on server to channel, redirect to collaborations DONE
-- add some indicator that this task is shared XX
-
-*/
 </script>
+
 <template>
-    <div class="container">
-        <p>{{ tempOutput }}</p>
-        <h1>Share task {{ taskName }}</h1>
-        <p>When you will share it, whole task will be moved to <router-link to="/shared">Shared Tasks</router-link>. Everyone that has your password will be able to edit it.</p>
-        <!-- copy style from https://codepen.io/NielsVoogt/pen/eYBQpPR -->
-        <form id="share-form" @submit.prevent="onSubmit">
-            <div class="field">
-                <label for="collab-name">Collaboration's name</label>
-                <input type="text" id="collab-name" v-model="collabName" @input="debouncedFilterName.run" required>
-            </div>
-            <div class="field">
-                <label for="password">Password</label>
-                <input type="password" id="password" v-model="password" required>
-            </div>
-            <p>{{ additionalInfo }}</p>
-            <input type="submit" value="Share it!">
-        </form>
-    </div>
+  <div class="container">
+    <p>{{ tempOutput }}</p>
+    <h1 class="title">Share Task: {{ taskName }}</h1>
+    <p class="info-text">
+      When you share it, the whole task will be moved to 
+      <router-link to="/shared" class="link">Shared Tasks</router-link>. 
+      Anyone with your password will be able to edit it.
+    </p>
+    
+    <form id="share-form" @submit.prevent="onSubmit" class="form">
+      <div class="field">
+        <label for="collab-name" class="label">Collaboration's Name</label>
+        <input type="text" id="collab-name" v-model="collabName" @input="debouncedFilterName.run" required class="input">
+      </div>
+      
+      <div class="field">
+        <label for="password" class="label">Password</label>
+        <input type="password" id="password" v-model="password" required class="input">
+      </div>
+
+      <p class="additional-info">{{ additionalInfo }}</p>
+      
+      <button type="submit" class="submit-btn">Share it!</button>
+    </form>
+  </div>
 </template>
+
 <style lang="sass" scoped>
-    @use "@/assets/styles/common"
+@use "@/assets/styles/common"
 
-    .container 
-        background-color: common.$bg-color
-        color: common.$text-color
-        width: 100%
-        height: calc(100vh - common.$header-height)
+.container
+  background-color: common.$bg-color
+  color: common.$text-color
+  width: 100%
+  height: calc(100vh - common.$header-height)
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  padding: 20px
 
-        display: flex
-        flex-direction: column
-        align-items: center
+.title
+  font-size: 2.5rem
+  font-weight: 600
+  margin-bottom: 20px
 
-        *
-            box-sizing: border-box
-            // margin: 10px
+.info-text
+  font-size: 1rem
+  text-align: center
+  margin-bottom: 20px
+  color: common.$subtle-text-color
 
-        form
-            display: flex
-            flex-direction: column
+.link
+  color: common.$link-color
+  text-decoration: none
+  &:hover
+    text-decoration: underline
 
-            gap: 20px
+.form
+  display: flex
+  flex-direction: column
+  gap: 15px
+  width: 100%
+  max-width: 500px
 
-            .field
-                display: flex
-                flex-direction: column
-                gap: 5px
+.field
+  display: flex
+  flex-direction: column
+  gap: 5px
 
-                input
-                    width: 100%
-                    padding: 3px
-                    background-color: common.$input-in-tile-bg
-                    border: common.$border
-                    outline: none
-                    color: common.$input-in-tile-color
+.label
+  font-size: 1rem
+  font-weight: 500
 
-                    box-sizing: border-box
+.input
+  padding: 12px 15px
+  border: 1px solid common.$border
+  border-radius: 8px
+  font-size: 1rem
+  background-color: common.$input-bg-color
+  color: common.$text-color
+  outline: none
+  transition: border-color 0.3s ease
+  &:focus
+    border-color: common.$focus-border-color
+
+.additional-info
+  font-size: 0.9rem
+  color: common.$error-color
+  text-align: center
+
+.submit-btn
+  padding: 12px 20px
+  font-size: 1.1rem
+  background-color: common.$button-bg-color
+  color: white
+  border: none
+  border-radius: 8px
+  cursor: pointer
+  transition: background-color 0.3s ease
+  &:hover
+    background-color: common.$button-hover-bg-color
 </style>
