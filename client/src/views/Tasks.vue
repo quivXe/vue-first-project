@@ -18,7 +18,7 @@ import UIManager from '../services/UIManager.js'
 import IndexedDBManager from '../services/IndexedDBManager.js'
 import CollaborationManager from '../services/CollaborationManager.js'
 import Debounce from '../utils/debounce.js';
-import { handleFetchError } from '../utils/handleErrorUtil.js';
+import { handleFetchError, redirect } from '../utils/handleErrorUtil.js';
 
 
 const route = useRoute();
@@ -77,15 +77,17 @@ const initializeManagers = async () => {
       uiManager.init(taskManager);
 
       // GET OPERATIONS FROM DATABASE
+      let hasOperationsBeenFetched = true;
       if (collaborating) {
-        await collabManager.getOperationsFromDatabase(taskManager, indexedDBManager);
+        hasOperationsBeenFetched = await collabManager.getOperationsFromDatabase(taskManager, indexedDBManager);
       }
+      console.log(hasOperationsBeenFetched);
   
       // INITIALIZE TASK MANAGER
       await taskManager.init();
       
       // FINISH BY DISPLAYING UI
-      managersLoaded.value = true;
+      managersLoaded.value = true && hasOperationsBeenFetched;
     })
     .catch((err) => { // Catch subscribing pusher promise
       handleFetchError({ url: "/api/pusher/channel-auth", statusCode: err.status })
@@ -98,7 +100,8 @@ const initializeManagers = async () => {
       new CustomEvent('show-notification', {
         detail: "Something went wrong, please log in again."
       })
-    )
+    );
+    redirect("/join");
   }
 }
 
@@ -135,7 +138,6 @@ onUnmounted(() => {
     </div>
     <div class="main">
       <div class="columns">
-        <div @click="tempNotification">TEMP REQUEST</div>
         <Column
           v-for="(taskStatusNumber, taskStatusName) in uiManager.TASK_STATUSES"
           :key="taskStatusNumber"

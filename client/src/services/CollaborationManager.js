@@ -2,13 +2,25 @@ import { getPusher } from "./pusherClient";
 import { fetchPost } from '../utils/fetchUtil';
 import { setCookie, getCookie } from "../utils/cookieUtils";
 import { importTasks } from "../utils/taskTransferUtils";
-import { handleFetchError } from "../utils/handleErrorUtil";
+import { handleFetchError, redirect } from "../utils/handleErrorUtil";
 
 class CollaborationManager {
     constructor(collabName) {
         this.collabName = collabName;
 
-        this.pusher = getPusher();
+        try {
+            this.pusher = getPusher();
+        }
+        catch (error) {
+            window.dispatchEvent(
+                new CustomEvent("collaboration-error", {
+                    detail: {
+                        message: "Something went wrong, please try again."
+                    }
+                })
+            );
+            redirect("/join");
+        }
 
     }
     
@@ -114,14 +126,36 @@ class CollaborationManager {
     }
 
     async getOperationsFromDatabase(taskManager, collabIndexedDBManager) {
+        function handleRequestCurrentVersionError({nooneOnline, err, url}) {
+            if (nooneOnline) {
+                window.dispatchEvent(
+                    new CustomEvent('show-notification', {
+                        detail: "There is noone online. Please try again later."
+                    })
+                );
+                redirect("/join");
+            } else {
+                handleFetchError({ url, status: err.status });
+            }
+        };
+
+
         const lastUpdate = getCookie(`lastUpdate-${this.collabName}`);
 
         /* -- If there is no last update (first time launching this collaboration), - */
         /* ---------------- request current version from active users --------------- */
         if (!lastUpdate) {
-            console.log("first time launch");
-            await this.requestCurrentVersion(collabIndexedDBManager);
-            return;
+            
+            try {
+
+                await this.requestCurrentVersion(collabIndexedDBManager);
+                return 1;
+
+            } 
+            catch ({nooneOnline, err, url}) {
+                handleRequestCurrentVersionError({nooneOnline, err, url});
+                return 0;
+            }
         }
 
         const payload = {
@@ -130,8 +164,8 @@ class CollaborationManager {
         }
 
         const url = "/api/operations/get";
-        fetchPost(url, payload)
-        .then(data => {
+        try {
+            const data = await fetchPost(url, payload);
             let timestamp = null;
             for (let operation of data.operations) {
                 if (operation.operationType === "init") continue;
@@ -139,21 +173,32 @@ class CollaborationManager {
                 timestamp = operation.createdAt;
             }
             if (timestamp) setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
-        })
-        .catch(async err => {
-            handleFetchError({ url: url, statusCode: err.status });
+    
+            return 1;
+        }
 
-            // TODO: make requestCurrentVersion in handleError.
+        /* ------------------ Couldn't get operations from database ----------------- */
+        catch(err) {
             if (err.status === 410) { // timestamp is not in the database
-                console.log("timestamp is not in the database");
-                await this.requestCurrentVersion(collabIndexedDBManager);
+                
+                try {
+                    await this.requestCurrentVersion(collabIndexedDBManager);
+                    return 1;
+                } 
+                catch ({nooneOnline, err, url}) {
+                    handleRequestCurrentVersionError({nooneOnline, err, url});
+                    return 0;
+                }
+                
             } else {
-                console.log("unknown error", err);
+                handleFetchError({ url: url, statusCode: err.status });
             }
-        })
+    
+            return 0;
+        }
     }
+
     requestCurrentVersion(collabIndexedDBManager) {
-        console.log("requested current version with socket_id", this.pusher.connection.socket_id);
         return new Promise((mainResolve, mainReject) => {
 
             const payload = {
@@ -161,7 +206,8 @@ class CollaborationManager {
                 collabName: this.collabName,
                 socket_id: this.pusher.connection.socket_id,
             }
-            fetchPost("/api/request-current", payload)
+            const url = "/api/request-current"
+            fetchPost(url, payload)
             .then(serverResData => {
     
                 return new Promise((resolve, reject) => {
@@ -171,14 +217,14 @@ class CollaborationManager {
                                 this.channel.unbind("get-current-version");
                     
                                 if ( !pusherData.ok && pusherData.nooneOnline ) {
-                                    reject({nooneOnline: true});
+                                    reject({nooneOnline: true, err: null});
                                 }
                                 resolve(pusherData);
                             })
                         
                     } else {
                         if (serverResData.message === "Noone to provide current version") {
-                            reject({ nooneOnline: true });
+                            reject({ nooneOnline: true, err: null });
                         }
                     }
     
@@ -193,15 +239,8 @@ class CollaborationManager {
                 await importTasks(collabIndexedDBManager, tasks);
                 mainResolve(data);
             })
-            .catch(err => {
-                // TODO: here too, add handleError to promise handling where its used
-                if (err.nooneOnline) {
-                    console.log("Noone to provide current version");
-                    
-                } else { // unhandled
-                    console.log(err);
-                }
-                mainReject(err);
+            .catch(({ nooneOnline, err }) => { // err: {nooneOnline: true} OR http error while fetching
+                mainReject({ nooneOnline, err, url });
             })
 
             

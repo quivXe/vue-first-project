@@ -7,7 +7,7 @@ import { handleFetchError } from '../utils/handleErrorUtil';
 function handleIdbError(text, error) {
   window.dispatchEvent(
     new CustomEvent('show-notification', {
-        detail: "Something went wrong, please try again."
+        detail: "Something went wrong."
     })
   );
 

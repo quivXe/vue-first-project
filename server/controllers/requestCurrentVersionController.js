@@ -50,7 +50,7 @@ exports.requestCurrentVersionController = async (req, res) => {
                 clearTimeout(openForResponse[collabName].timeout);
                 delete openForResponse[collabName];
                 pusher.trigger(`private-${collabName}`, 'get-current-version', { ok: false, nooneOnline: true });
-            }, 10000) // wait 10 seconds 
+            }, 5000) // wait 5 seconds 
         };
 
         try {

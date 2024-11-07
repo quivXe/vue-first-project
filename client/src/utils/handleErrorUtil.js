@@ -1,7 +1,7 @@
 import router from "../router";
 import { removeCookie } from "./cookieUtils";
 
-function redirect(url, clearSession=true, timeout=500) {
+export function redirect(url, clearSession=true, timeout=500) {
     if (clearSession) { removeCookie("sid", {path: "/"}) }
     setTimeout(() => router.push(url), timeout);
 }
@@ -150,7 +150,7 @@ export function handleFetchError(details) {
 
             /* ------------------------ Timestamp not in database ----------------------- */
             if (details.statusCode === 410) {
-                // TODO: return info that it should get current version
+                // handled locally in CollaborationManager.js
             }
 
             /* ----------------------------- Session expired ---------------------------- */

@@ -2,7 +2,6 @@
 
 import Notification from './components/Notification.vue';
 
-// TODO: add event for every child, which will be used for sending popups after redirections (like your session expired)
 </script>
 <template>
   <Notification />
