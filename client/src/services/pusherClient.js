@@ -1,5 +1,5 @@
 import Pusher from 'pusher-js';
-Pusher.logToConsole = true; // temp
+Pusher.logToConsole = true; // TODO: temp
 
 /**
  * Returns new Pusher instance.

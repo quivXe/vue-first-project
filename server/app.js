@@ -1,6 +1,5 @@
 // /server/app.js
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 
@@ -17,7 +16,6 @@ const app = express();
 // Middleware
 const globalLimiter = createRateLimiter(15 * 60 * 1000, 100);
 app.use(globalLimiter);
-app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: false })); // Middleware to parse `application/x-www-form-urlencoded` data
 app.use(session); // session config

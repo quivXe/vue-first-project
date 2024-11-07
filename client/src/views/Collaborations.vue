@@ -2,25 +2,32 @@
 import IndexedDBManager from '../services/IndexedDBManager';
 import { ref } from 'vue';
 
-const tasks = ref([]);
+const collabNames = ref(null);
 
 const indexedDBManager = new IndexedDBManager("TODO_APP", "collab_tasks");
 
 indexedDBManager.getTasksByParentId(-1)
 .then(res => {
-    tasks.value = res;
+    collabNames.value = new Set(res.map(task => task.collabName));
 });
 
+// TODO:
+// - add loading indicator
+// - add error handling for idb
+// - add text when no tasks (maybe with link to join and tutorial on how to share one)
+// - add remove button that will remove collab from idb
+
 </script>
+
 <template>
     <div class="container">
         <h1>Collaborations</h1>
         <router-link
-            :to="`/join/${task.collabName}`" 
+            :to="`/join/${collabName}`" 
             class="link"
-            v-for="task in tasks"
+            v-for="collabName in collabNames"
         >
-            {{ task.collabName }}
+            {{ collabName }}
         </router-link>
     </div>
 </template>

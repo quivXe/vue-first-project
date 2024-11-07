@@ -26,9 +26,11 @@ export function setCookie(name, value, options = {}) {
     const domain = options.domain ? '; domain=' + options.domain : '';
     const secure = options.secure ? '; secure' : '';
     const httpOnly = options.httpOnly ? '; HttpOnly' : '';
+    const sameSite = '; SameSite=Strict'; // Ensures the cookie is only sent in same-site requests
 
-    document.cookie = name + '=' + (value || '') + expires + path + domain + secure + httpOnly;
+    document.cookie = name + '=' + (value || '') + expires + path + domain + secure + httpOnly + sameSite;
 }
+
 
 /**
  * Retrieves the value of a cookie by its name.
