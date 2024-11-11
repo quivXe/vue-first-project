@@ -1,4 +1,4 @@
-// /src/components/index.js
+// /src/components/todoTasks/index.js
 
 // Exporting components from the root of the components directory
 export { default as AddTaskButton } from './AddTaskButton.vue';

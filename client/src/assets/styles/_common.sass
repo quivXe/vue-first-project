@@ -2,34 +2,46 @@
     scrollbar-color: rgb(88, 93, 96) rgb(32, 35, 36)
     scrollbar-width: thin
 
-$border-color: rgb(85, 85, 85)
-$border: 1px solid rgb(85, 85, 85)
-$bg-color: rgb(27, 29, 32)
+%not-hovered
+    opacity: .7
+
+%hovered
+    opacity: 1
+
+
 $text-color: white
+$link-color: rgb(85, 176, 255)
+$subtle-text-color: rgb(180, 180, 180)  // Subtle text color for descriptive info or less emphasized elements
+
+$bg-color: rgb(27, 29, 32)
+$bg-color-2: rgb(32, 34, 37)
+$bg-color-3: rgb(50, 50, 50)
+$bg-color-contrast: rgb(47, 89, 203) // #5B95D9
+$bg-color-contrast-2: rgb(25, 54, 134) // more muted
+
+$bg-gradient: linear-gradient(135deg, rgb(40, 40, 40), $bg-color)
+
+$border-color: rgb(85, 85, 85)
+$border: 1px solid $border-color
+
+$box-shadow-color: rgba(0, 0, 0, 0.681)
+$box-shadow-color-hover: rgba(150, 150, 150, .5)
+$box-shadow-color-active: rgba(255, 255, 255, .7)
+$box-shadow-color-2: rgba(0, 0, 0, .3)
+$box-shadow-color-2-hover: rgba(0, 0, 0, .5)
 
 $overlay-color: #1b1b1b
 $options-bg: $bg-color
 $options-color: white
 
 // header
-$header-text-color: white
 $header-height: 70px
 
 // nav
-$nav-text-color: rgb(208, 208, 208)
-$nav-last-child-text-color: white
 $nav-height: 70px
 
 // main
 $main-height: calc(100vh - $header-height - $nav-height)
-$main-text-color: white
-$column-header-bg: rgb(32, 34, 37)
-$tile-bg-color: rgb(57, 57, 203)
-$tile-unhovered-color: rgb(208, 208, 200)
-$tile-hovered-color: white
-$input-in-tile-color: white
-$input-in-tile-bg: $bg-color
-$add-new-button-bg: rgb(50, 50, 50)
 
 // description
 $output-bg-color: #C4C5CC
@@ -37,3 +49,18 @@ $output-text-color: black
 $textarea-bg-color: white
 $textarea-font: 'Monaco', courier, monospace
 $description-container-bg-color: rgb(17, 22, 25)
+
+// notification
+$notification-bg-color: #cb3939
+$notification-text-color: white
+
+%input
+    border: $border
+    border-radius: 8px
+    background-color: $bg-color
+    color: $text-color
+    outline: none
+    transition: border-color 0.3s ease
+
+    &:focus
+        border-color: $bg-color-contrast

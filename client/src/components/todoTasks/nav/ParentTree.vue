@@ -16,7 +16,7 @@ const emit = defineEmits([
         <div 
             @click="emit('parentClicked', null)"
             class="home">
-            home
+            <img src="@/assets/images/home.svg" alt="home">
         </div>
         <div
             v-for="parent in parents"
@@ -35,31 +35,45 @@ const emit = defineEmits([
         display: flex
         align-items: center
         box-sizing: border-box
+        color: common.$text-color
 
-        padding: 20px 30px
+        padding: 20px 0
 
         overflow-x: auto
+        overflow-y: hidden
         @extend %scrollbar
+        flex-grow: 1
     
-        %nav-element-last 
+        %nav-element-last-or-hovered
             text-decoration: underline
-            color: common.$nav-last-child-text-color
+            @extend %hovered
 
         .nav-element
             padding: 0 10px
             cursor: pointer
             white-space: nowrap
             border-left: common.$border
+            @extend %not-hovered
 
             &:hover, &:last-child
-                @extend %nav-element-last
+                @extend %nav-element-last-or-hovered
 
         
         .home
             padding-right: 10px
             cursor: pointer
+            @extend %not-hovered
+            box-sizing: border-box
 
             &:hover, &:last-child
-                @extend %nav-element-last
+                @extend %nav-element-last-or-hovered
+
+            display: flex
+            align-items: center
+            justify-content: center
+
+            img
+                flex-shrink: 1
+                height: 100%
     
 </style>

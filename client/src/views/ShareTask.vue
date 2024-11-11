@@ -7,18 +7,17 @@ import Debounce from '../utils/debounce'
 import { migrateTaskTree } from '../utils/taskTransferUtils';
 import { setCookie } from '../utils/cookieUtils';
 import { handleFetchError } from '../utils/handleErrorUtil';
+import FormInput from '@/components/FormInput.vue';
+import FormWrapper from '@/components/FormWrapper.vue';
 
 const localIndexedDBManager = new IndexedDBManager("TODO_APP", "local_tasks");
 const collabIndexedDBManager = new IndexedDBManager("TODO_APP", `collab_tasks`);
 
 const collabName = ref('');
 const password = ref('');
-const additionalInfo = ref("");
-const tempOutput = ref("");
+const loading = ref(false);
 
-const debouncedResetAdditionalInfo = new Debounce(() => {
-    additionalInfo.value = "";
-}, 4500);
+
 const debouncedFilterName = new Debounce(() => {
     filterName();
 }, 80);
@@ -27,6 +26,7 @@ const route = useRoute();
 const router = useRouter();
 const taskIdFromRoute = parseInt(route.params.taskId);
 const taskName = ref("");
+const showNameTooltipToggle = ref(false);
 
 // validate taskId and set taskName
 (async () => {
@@ -46,7 +46,6 @@ function filterName() {
 
     // Allowed characters: letters, numbers, _ - = @ , . ;
     // Maximum length: 156
-    // TODO: add info that user used not allowed character
 
     if (collabName.value.length > 156) {
         collabName.value = collabName.value.slice(0, 156);
@@ -56,8 +55,7 @@ function filterName() {
     
     if (!regex.test(collabName.value)) {
         collabName.value = collabName.value.replaceAll(/[^a-zA-Z0-9_\-=@,.;]/g, '');
-        additionalInfo.value = "Invalid character";
-        debouncedResetAdditionalInfo.run();
+        showNameTooltipToggle.value = !showNameTooltipToggle.value;
     }
 }
 
@@ -76,13 +74,16 @@ async function validateAndGetPayload() {
     };
 }
 async function onSubmit() {
+  
+  const payload = await validateAndGetPayload();
+  if (!payload) {
+    handleFetchError({url: "/api/collaborations/create", statusCode: 409}); // name is taken (locally)
+    loading.value = false;
+    return;
+  }
 
-    const payload = await validateAndGetPayload();
-    if (!payload) {
-        handleFetchError(new Error("collaboration with name already exists"));
-        return;
-    }
-    additionalInfo.value = "Loading...";
+  loading.value = true;
+
     fetchPost("/api/collaborations/create", payload)
     .then(async data => {
  
@@ -110,11 +111,13 @@ async function onSubmit() {
         .catch(err => {
             console.log("error while logging initial operation", err);
             handleFetchError({ url: "/api/operations/log", statusCode: err.status });
+            loading.value = false;
         })
     })
     .catch(error => {
         console.log(error);
         handleFetchError({ url: "/api/collaborations/create", statusCode: error.status });
+        loading.value = false;
     })
     
 }
@@ -122,29 +125,40 @@ async function onSubmit() {
 
 <template>
   <div class="container">
-    <p>{{ tempOutput }}</p>
     <h1 class="title">Share Task: {{ taskName }}</h1>
     <p class="info-text">
-      When you share it, the whole task will be moved to 
-      <router-link to="/shared" class="link">Shared Tasks</router-link>. 
+      When you share it, the whole task will be moved to the new collaboration.<br>
+      You can log in to it from
+      <router-link to="/join" class="link">Connect</router-link>. 
       Anyone with your password will be able to edit it.
     </p>
     
-    <form id="share-form" @submit.prevent="onSubmit" class="form">
-      <div class="field">
-        <label for="collab-name" class="label">Collaboration's Name</label>
-        <input type="text" id="collab-name" v-model="collabName" @input="debouncedFilterName.run" required class="input">
-      </div>
-      
-      <div class="field">
-        <label for="password" class="label">Password</label>
-        <input type="password" id="password" v-model="password" required class="input">
-      </div>
+    <FormWrapper
+        id="share-form"
+        :submitButtonText="'Share it!'"
+        :loading="loading"
+        @onSubmit="onSubmit"
+    >
+      <FormInput
+        id="collab-name"
+        label="Collaboration's Name"
+        :required="true"
+        :value="collabName"
+        info="Allowed characters: letters numbers _ - = @ , . ;"
+        :showTooltipToggle="showNameTooltipToggle"
+        @input="value => { collabName = value; debouncedFilterName.run() }"
+      />
 
-      <p class="additional-info">{{ additionalInfo }}</p>
-      
-      <button type="submit" class="submit-btn">Share it!</button>
-    </form>
+      <FormInput
+        id="password"
+        label="Password"
+        type="password"
+        :value="password"
+        @input="value => password = value"
+        :required="true"
+      />
+
+    </FormWrapper>
   </div>
 </template>
 
@@ -161,6 +175,7 @@ async function onSubmit() {
   align-items: center
   justify-content: center
   padding: 20px
+  box-sizing: border-box
 
 .title
   font-size: 2.5rem
@@ -170,8 +185,10 @@ async function onSubmit() {
 .info-text
   font-size: 1rem
   text-align: center
+  margin: 0
   margin-bottom: 20px
   color: common.$subtle-text-color
+  line-height: 1.5rem
 
 .link
   color: common.$link-color
@@ -179,48 +196,4 @@ async function onSubmit() {
   &:hover
     text-decoration: underline
 
-.form
-  display: flex
-  flex-direction: column
-  gap: 15px
-  width: 100%
-  max-width: 500px
-
-.field
-  display: flex
-  flex-direction: column
-  gap: 5px
-
-.label
-  font-size: 1rem
-  font-weight: 500
-
-.input
-  padding: 12px 15px
-  border: 1px solid common.$border
-  border-radius: 8px
-  font-size: 1rem
-  background-color: common.$input-bg-color
-  color: common.$text-color
-  outline: none
-  transition: border-color 0.3s ease
-  &:focus
-    border-color: common.$focus-border-color
-
-.additional-info
-  font-size: 0.9rem
-  color: common.$error-color
-  text-align: center
-
-.submit-btn
-  padding: 12px 20px
-  font-size: 1.1rem
-  background-color: common.$button-bg-color
-  color: white
-  border: none
-  border-radius: 8px
-  cursor: pointer
-  transition: background-color 0.3s ease
-  &:hover
-    background-color: common.$button-hover-bg-color
 </style>

@@ -19,22 +19,31 @@ const emit = defineEmits([
     .container
         box-sizing: border-box
         width: 100%
-        padding: 5px 10px
         display: flex
-        box-shadow: -1px 1px 4px rgba(0, 0, 0, 0.681)
+        box-shadow: -1px 1px 4px common.$box-shadow-color
         order: -1
         position: relative
-        background-color: common.$add-new-button-bg
+        background-color: common.$bg-color-3 
         border: common.$border
         user-select: none
         cursor: pointer
+        
+        border-radius: 10px
+        
+        color: common.$text-color
+
+        &:hover
+            
+            box-shadow: 0 0 3px 1px common.$box-shadow-color-hover
+
+            .content
+                @extend %hovered
 
         .content
             flex-grow: 1
-            padding: 5px 10px
+            padding: 10px 15px
             overflow-wrap: anywhere
-            color: common.$tile-unhovered-color
             
-            &:hover
-                color: common.$tile-hovered-color
+            @extend %not-hovered
+            
 </style>

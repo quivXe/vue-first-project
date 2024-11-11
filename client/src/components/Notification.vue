@@ -19,7 +19,6 @@
   
   let id = 0;
   function showNotification(newMessage) {
-    console.log(notifications.value.length, "length");
     const message = breakText(newMessage);
     const notification = {
       id: id++,
@@ -92,49 +91,48 @@
   });
   </script>
   
-  <style scoped>
+  <style scoped lang="sass">
+  @use "@/assets/styles/common"
 
-  .notifications {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 10px;
+  .notifications 
+    display: flex
+    flex-direction: column-reverse
+    gap: 10px
 
-    position: fixed;
-    top: 10px;
-    right: 10px;
+    position: fixed
+    top: 10px
+    right: 10px
 
-    z-index: 9999;
-  }
+    z-index: 9999
+  
 
-  .notification {
-    background-color: #cb3939;
-    color: white;
-    padding: 10px 20px;
-    font-weight: bold;
-    border-radius: 5px;
+  .notification 
+    background-color: common.$notification-bg-color
+    color: common.$notification-text-color
+    padding: 10px 20px
+    font-weight: bold
+    border-radius: 5px
 
-    box-sizing: border-box;
+    box-sizing: border-box
 
-    display: flex;
-    flex-direction: column;
-    gap: .3em;
-  }
-
-  .v-enter-active, .v-leave-active {
-      transition: all .5s ease;
-  }
-
-  .v-enter-from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  .v-enter-to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  .v-leave-to {
-    transform: translateX(100%);
+    display: flex
+    flex-direction: column
+    gap: .3em
+  
+  .v-enter-active, .v-leave-active 
+      transition: all .5s ease
+  
+  .v-enter-from 
+    transform: translateX(100%)
     opacity: 0
-  }
+  
+  .v-enter-to 
+    transform: translateX(0)
+    opacity: 1
+  
+  .v-leave-to 
+    transform: translateX(100%)
+    opacity: 0
+  
   </style>
   

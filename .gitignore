@@ -25,6 +25,9 @@ coverage
 # docs
 /docs/
 
+*.py
+/output.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -12,21 +12,22 @@ marked.use({
 })
 
 const props = defineProps({
-    "task": Object
-})
+    "task": Object,
+});
+
 const emit = defineEmits([
     "saveDescription"
-])
+]);
 
 const delayedSave = new Debounce(() => {
     saving.value = false;
     emit("saveDescription", props.task, descContent.value);
-}, 1000)
+}, 5000)
 
 const saving = ref(false);
 const editing = ref(false);
-const descContent = ref(props.task.description);
-
+const descContent = ref(props.task?.description);
+const container = ref(null);
 const output = computed(() => {
     let parsed = marked.parse(descContent.value);
     return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
@@ -39,7 +40,14 @@ function showResult() {
     editing.value = false;
 }
 function onInput() {
-    descContent.value = descContent.value.slice(0, 2000);
+    if (descContent.value.length >= 2000) {
+        descContent.value = descContent.value.slice(0, 2000);
+        window.dispatchEvent(
+            new CustomEvent("show-notification", {
+                detail: "Description is too long, only first 2000 characters will be saved."
+            })
+        );    
+    }
     saving.value = true;
     delayedSave.run();
 }
@@ -49,110 +57,119 @@ onBeforeUnmount(() => {
     delayedSave.now();
 });
 
+
 </script>
 <template>
-    <div class="container">
+    <div class="container" ref="container">
         <div class="info-bar">
-            <h4>Description - {{ props.task.name }}</h4>
+            <h4 class="title">Description - {{ props.task.name }}</h4>
             <div class="status-container">
                 <div class="edit-status">
-                    <div v-if="editing" @click="showResult" class="show-result"><img src="@/assets/images/show.svg" alt="result"></div>
-                    <div v-else @click="showEdit" class="show-edit"><img src="@/assets/images/edit.svg" alt="edit"></div>
-                </div>
-                <div class="saving-status">
-                    <div v-if="saving" class="saving" title="saving">saving</div>
-                    <div v-else class="saved" title="saved">saved</div>
+                    <div v-if="editing" @click="showResult" class="show-result"><img src="@/assets/images/show.svg" alt="Show Result"></div>
+                    <div v-else @click="showEdit" class="show-edit"><img src="@/assets/images/edit.svg" alt="Edit"></div>
                 </div>
             </div>
         </div>
         <div class="content">
-            <textarea v-if="editing" v-model="descContent" @input="onInput"></textarea>
+            <textarea
+                v-if="editing"
+                v-model="descContent"
+                @input="onInput"
+            ></textarea>
             <div v-else class="output" v-html="output"></div>
+            <div class="saving-status" title="Description is saved after few seconds or after you leave.">
+                <span v-if="saving" class="saving">Saving...</span>
+                <span v-else class="saved">Saved</span>
+            </div>
         </div>
     </div>
 </template>
+
 <style lang="sass" scoped>
     @use "@/assets/styles/common"
 
-    $info-bar-height: 12%
-
     .container
-        
         width: 30vw
         min-width: 250px
-        padding: 10px
-        padding-top: 0
-
-        margin-left: 8px
-
+        padding: 15px
+        background-color: common.$description-container-bg-color
+        box-shadow: 0px 0px 4px 2px common.$box-shadow-color-hover
+        border-radius: 8px
         display: flex
         flex-direction: column
+        gap: 10px
+        height: 100%
 
-        height: 95%
-        background-color: common.$description-container-bg-color
-        box-shadow: 0px 0px 4px 2px rgba(100, 100, 100, 0.681)
+        margin-left: 7px // for ShowDescriptionButton
+
+    .info-bar
+        display: flex
+        justify-content: space-between
+        align-items: center
+        padding: 0 5px
+        gap: 10px
+        flex-shrink: 0
+
+        .title
+            font-size: 1.1rem
+            font-weight: bold
+            color: common.$text-color
+            margin: 0
+            max-height: 4rem
+            overflow-y: auto
+            word-break: break-word
+
+        .status-container
+            display: flex
+            gap: 10px
+
+            .edit-status
+                cursor: pointer
+
+    .content
+        position: relative
+        flex-grow: 1
+        display: flex
+        flex-direction: column
+        background-color: common.$textarea-bg-color
         border-radius: 5px
+        overflow: hidden
 
-        .info-bar
-            display: flex
-            gap: 20px
-            user-select: none
-            cursor: default
-            height: $info-bar-height
-
-            align-items: center
-            justify-content: space-between
-
-            padding-right: 5px
-
-            h4
-                margin: 0
-
-            .status-container
-                display: flex
-                justify-content: space-between
-                align-items: center
-                width: 20%
-
-                .edit-status
-                    cursor: pointer
-
-                    *
-                        display: flex
-                        align-items: center
-
-                .saving-status
-                    opacity: 50%
-        .content
+        textarea
             width: 100%
-            display: flex
-            height: 100% - $info-bar-height
-            
-            textarea
-                width: 100%
-                padding: 5px
-                border-radius: 3px
+            height: 100%
+            padding: 10px
+            border-radius: 5px
+            background-color: common.$textarea-bg-color
+            font-family: common.$textarea-font
+            outline: none
+            resize: none
+            box-sizing: border-box
+            color: common.$output-text-color
+            overflow-y: auto
+            @extend %scrollbar
 
-                outline: 0
+        .output
+            width: 100%
+            height: 100%
+            padding: 10px
+            color: common.$output-text-color
+            background-color: common.$output-bg-color
+            border-radius: 5px
+            overflow: auto
+            @extend %scrollbar
 
-                background-color: common.$textarea-bg-color
-                font-family: common.$textarea-font
+            >:first-child
+                margin-top: 0
+            >:last-child
+                margin-bottom: 0
 
-                @extend %scrollbar
+        .saving-status
+            position: absolute
+            bottom: 5px
+            right: 15px
+            font-size: 0.9rem
+            color: common.$subtle-text-color
+            user-select: none
 
-            .output
-                width: 100%
-                padding: 5px
-                border-radius: 3px
-
-                background-color: common.$output-bg-color
-                color: common.$output-text-color
-
-                overflow-y: auto
-                @extend %scrollbar
-                flex-grow: 0
-
-                *
-                    margin: 0
-                    margin-bottom: 5px
 </style>

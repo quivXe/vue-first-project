@@ -7,9 +7,8 @@ const emit = defineEmits([
 <template>
     <div
         @click="emit('backPressed')"
-        class="kik"
     >
-        <span><</span>
+        <img src="@/assets/images/arrow-left.svg" alt="<">
     </div>
 </template>
 
@@ -17,21 +16,21 @@ const emit = defineEmits([
 @use "@/assets/styles/common"
 
 div
-    padding: 10px 30px
     box-sizing: border-box
     cursor: pointer
-    border-right: common.$border
+    // border-right: common.$border
     display: flex
     align-items: center
     user-select: none
+    @extend %not-hovered
+    
 
-    span
+    img
         font-family: 'Comic Sans MS'
         font-size: 1.85em
-
-        filter: brightness(.6)
+        color: common.$text-color
 
     &:hover
-        :deep(span)
-            filter: brightness(1)
+        @extend %hovered
+        transform: scale(1.1)
 </style>

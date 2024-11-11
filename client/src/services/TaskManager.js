@@ -263,18 +263,23 @@ class TaskManager {
     }
 
     // Update parent tree and current tasks
-    if (this.parentTree.value.find(t => t.collabTaskId === task.collabTaskId)) {
+    if (this.collaborating) {
 
-      while (this.currentParentId !== task.collabTaskId) {
+      if (this.parentTree.value.find(t => t.collabTaskId === task.collabTaskId)) {
+        while (this.currentParentId !== task.collabTaskId) {
+          this.parentTree.value.pop();
+        }
         this.parentTree.value.pop();
+  
+        this.updateCurrentTasks({ parentId: task.parentId });
       }
-      this.parentTree.value.pop();
+      else if (task.parentId === this.currentParentId) {
+        let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
+        this.currentTasks.value = newCurrentTasks;
+      }
 
-      this.updateCurrentTasks({ parentId: task.parentId });
-    }
-    else if (task.parentId === this.currentParentId) {
-      let newCurrentTasks = this.currentTasks.value.filter(t => t.id !== task.id);
-      this.currentTasks.value = newCurrentTasks;
+    } else {
+      this.currentTasks.value = this.currentTasks.value.filter(t => t.id !== task.id);
     }
   }
 

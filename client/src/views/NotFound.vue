@@ -21,5 +21,5 @@
         height: calc( 100vh - common.$header-height )
 
         a
-            color: rgb(138, 138, 200)
+            color: common.$link-color
 </style>

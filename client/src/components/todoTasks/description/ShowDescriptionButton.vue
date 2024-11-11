@@ -14,11 +14,13 @@ const emit = defineEmits([
     <div 
         @click="!disabled ? emit('showDescriptionToggle') : null"
         :class="{ disabled: disabled, 'is-description-shown': isDescriptionShown }"
+        :title="isDescriptionShown ? 'Hide description' : 'Show description'"
     >
-    <img src="C:\Users\sgrab\Downloads\arrow.png" alt="circled-chevron-left"/>
+    <img src="@/assets/images/arrow-left.svg" alt="<"/> 
     </div>
 </template>
 <style lang="sass" scoped>
+    @use "@/assets/styles/common"
     div
         font-size: 5em
         font-family: 'Comic Sans MS'
@@ -34,9 +36,15 @@ const emit = defineEmits([
         align-items: center
         justify-content: center
 
-        box-shadow: 0 0 3px 2px rgba(255, 255, 255, .3)
-        background-color: white
+        box-shadow: 0 0 3px 2px common.$box-shadow-color-hover
+        background-color: common.$bg-color
+        transition: box-shadow .2s
+        
+        &:hover:not(.disabled)
+            box-shadow: 0 0 3px 2px common.$box-shadow-color-active
 
+        img
+            padding-right: 2px // idk it seems more centered with that
     .disabled
         opacity: 25%
         cursor: default

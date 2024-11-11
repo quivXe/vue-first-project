@@ -108,7 +108,7 @@ watch(() => props.mouseReleasedToggle, () => {
             class="tile-content"
             @mousedown="onTaskPressed(task)"
         >
-            {{ task.name }}
+            <span>{{ task.name }}</span>
         </div>
 
         <div
@@ -139,51 +139,67 @@ watch(() => props.mouseReleasedToggle, () => {
 
         box-sizing: border-box
         width: 100%
-        padding: 5px 10px
         display: flex
-        background-color: common.$tile-bg-color
-        box-shadow: -1px 1px 4px rgba(0, 0, 0, 0.681)
+        background-color: common.$bg-color-contrast
+        box-shadow: -1px 1px 4px common.$box-shadow-color
+        border-radius: 10px
 
         transition-property: transform, filter
         transition-duration: .2s
         transition-timing-function: ease-in-out
 
+        &:hover
+            box-shadow: 0 0 3px 1px common.$box-shadow-color-hover
+    
+        > *
+            padding: 10px 15px
+        > *:first-child
+            padding-right: 0
+        > *:last-child
+            padding-left: 10px
+        
         .tile-content
             flex-grow: 1
-            padding: 5px 10px
             overflow-wrap: anywhere
             cursor: pointer
-            color: common.$tile-unhovered-color
+            color: common.$text-color
 
-            &:hover
-                color: common.$tile-hovered-color
+            display: flex
+            align-items: center
+            
+
+            &:hover > span
+                @extend %hovered
 
             input
-                width: 100%
-                padding: 3px
-                background-color: common.$input-in-tile-bg
-                border: common.$border
-                outline: none
-                color: common.$input-in-tile-color
 
                 box-sizing: border-box
+
+                width: 100%
+                padding: 8px 10px
+                
+                @extend %input
+
+            span
+                @extend %not-hovered
         
         .options
-            padding: 2px
             display: flex
             align-items: center
             justify-content: center
             flex-shrink: 0
             cursor: pointer
 
-            filter: brightness(.6)
+            @extend %not-hovered
 
             &:hover
-                filter: brightness(1)
+                transform: scale(1.1)
+
+                @extend %hovered
         
     .container.dragging
         transform: scale(.8)
         opacity: 0.4
-        box-shadow: 0 0 5px 3px rgba(255, 255, 255, .7)
+        box-shadow: 0 0 5px 3px common.$box-shadow-color-active
     
 </style>

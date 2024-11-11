@@ -12,6 +12,7 @@ import {
   BackButton,
   ParentTree
 } from '@/components/todoTasks';
+import Loading from '@/components/Loading.vue'
 
 import TaskManager from '../services/TaskManager.js'
 import UIManager from '../services/UIManager.js'
@@ -20,6 +21,25 @@ import CollaborationManager from '../services/CollaborationManager.js'
 import Debounce from '../utils/debounce.js';
 import { handleFetchError, redirect } from '../utils/handleErrorUtil.js';
 
+const freezeDescriptionTitle = () => {
+    const descContainer = document.querySelector('.description-container');
+    const title = descContainer.querySelector('.title');
+
+    // setting width in clone
+    const descContainerClone = descContainer.cloneNode(true);
+    descContainerClone.classList.add("description-container-clone");
+    descContainerClone.querySelector(".container").style.width = "30vw"; // update when style updates
+    descContainerClone.querySelector(".container").style.padding = "15px"; // update when
+    document.querySelector(".main-container .main").appendChild(descContainerClone);
+
+    // setting width in original while in transition
+    const w = descContainerClone.querySelector(".title").getBoundingClientRect().width;
+    title.style.minWidth = `${w}px`;
+}
+const unfreezeDescriptionTitle = () => {
+  const title = document.querySelector('.description-container .title');
+  title.style.minWidth = "unset";
+}
 
 const route = useRoute();
 let collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
@@ -31,15 +51,7 @@ let collabManager = null;
 const uiManager = new UIManager();
 
 const managersLoaded = ref(false);
-const loadingText = ref("Loading...");
 
-function tempNotification() {
-  console.log("notification sent");
-  const event = new CustomEvent('show-notification', {
-    detail: "This is a sample text to demonstrate how to break the text into lines based on a maximum character limit. A longerwo rdthatneeds tobebroken should also work."
-  });
-  window.dispatchEvent(event);
-}
 const initializeManagers = async () => {
   try {
     // has to create new cuz it wasnt refreshed 
@@ -81,7 +93,6 @@ const initializeManagers = async () => {
       if (collaborating) {
         hasOperationsBeenFetched = await collabManager.getOperationsFromDatabase(taskManager, indexedDBManager);
       }
-      console.log(hasOperationsBeenFetched);
   
       // INITIALIZE TASK MANAGER
       await taskManager.init();
@@ -124,7 +135,7 @@ onUnmounted(() => {
 })
 </script>
 <template>
-  <div v-if="!managersLoaded" class="loading-managers"> {{ loadingText }} </div>
+  <div v-if="!managersLoaded" class="loading-managers"> <Loading/> </div>
   <div class="wrapper" v-if="managersLoaded">
 
     <div class="nav">
@@ -177,13 +188,20 @@ onUnmounted(() => {
           :is-description-shown="uiManager.showDescription"
           :disabled="uiManager.getCurrentParent() === null"
         />
-        <Description
-          v-if="uiManager.showDescription"
-          :task="uiManager.getCurrentParent()"  
-          @save-description="uiManager.updateDescription"
-        />
+        <Transition
+          name="description-transition"
+          @enter="freezeDescriptionTitle()"
+          @after-enter="unfreezeDescriptionTitle()"
+          @before-leave="freezeDescriptionTitle()"
+        >
+            <Description
+              v-if="uiManager.showDescription"
+              :task="uiManager.getCurrentParent()"
+              @save-description="uiManager.updateDescription"
+            />
+        </Transition>
+        </div>
       </div>
-    </div>
     <Options
       v-if="uiManager.showOptions"
       :header="uiManager.optionsMenuData.header"
@@ -205,6 +223,8 @@ onUnmounted(() => {
 <style lang="sass" scoped>
   @use "@/assets/styles/common"
 
+  $main-padding: 10px
+
   *
     box-sizing: border-box
 
@@ -221,17 +241,35 @@ onUnmounted(() => {
     justify-content: center
     align-items: center
     height: common.$main-height
-    color: white
-    font-weight: bold
-    font-size: 1.5em
+    color: common.$text-color
+
+  .wrapper
+    display: flex
+    height: 100%
+    width: 100%
+    flex-direction: column
+    gap: $main-padding
+    padding: $main-padding
+    box-sizing: border-box
+    background-color: common.$bg-color
 
   .nav
     display: flex
 
     height: common.$nav-height
     background-color: common.$bg-color
-    color: common.$nav-text-color
-    border-bottom: common.$border
+    background: linear-gradient(135deg, common.$bg-color-2, common.$bg-color)
+
+    gap: $main-padding
+
+    border: common.$border
+    border-radius: 15px
+    padding: 0 $main-padding
+    align-items: stretch
+    
+    box-shadow: 0px 0px 4px 1px common.$box-shadow-color
+
+    transition: all .1s ease
 
   .main
     position: relative
@@ -242,24 +280,26 @@ onUnmounted(() => {
     min-height: 300px
 
     background-color: common.$bg-color
-    color: common.$main-text-color
+    color: common.$text-color
 
 
     .columns
       display: flex
       justify-content: space-evenly
       width: 100%
+      gap: $main-padding
 
     .description-container
       display: flex
       align-items: center
-      position: absolute
-      right: 0
+      position: absolute // handle position fixed to get rid of scrollbars
+      right: calc(-1 * $main-padding + 2px)
 
       z-index: 999
 
-      height: 100%
-      
+      height: 70%
+      top: 50%
+      transform: translateY(-50%)
 
   .options-overlay
     @extend %overlay
@@ -272,4 +312,44 @@ onUnmounted(() => {
 
     background-color: common.$overlay-color
     opacity: .3
+
+  .description-transition-enter-active, .description-transition-leave-active
+      transition: all .4s ease-in-out
+      overflow: hidden
+    
+  .description-transition-enter-from,
+  .description-transition-leave-to
+      opacity: 0
+      width: 0
+      min-width: 0
+      padding-left: 0
+      padding-right: 0
+
+  .description-transition-leave-to
+      margin: 0
+
+  .description-transition-enter-to,
+  .description-transition-leave-from
+      opacity: 1
+      width: 30vw
+      min-width: 250px
+</style>
+
+<style> 
+/* for width calculation in transition */
+  .description-container-clone {
+      visibility: hidden;
+      display: flex;
+      align-items: center;
+      position: absolute;
+      right: 0;
+
+      z-index: 999;
+
+      height: 70%;
+      top: 50%;
+      transform: translateY(-50%);
+
+  }
+
 </style>

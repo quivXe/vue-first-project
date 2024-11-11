@@ -1,29 +1,29 @@
 <script setup>
 const props = defineProps({
-    "header": String,
-    "options": Array
+  header: String,
+  options: Array
 })
-
 </script>
+
 <template>
-    <div class="options-menu">
-        <h3 class="header">{{ header }}</h3>
-        <hr>
-        <div class="options">
-            <div 
-                v-for="option in options" 
-                @click="option.callback"   
-                class="option"
-            >
-                {{ option.name }}
-            </div>
-        </div>
+  <div class="options-menu">
+    <h3 class="header">{{ header }}</h3>
+    <div class="options">
+      <div 
+        v-for="option in options" 
+        :key="option.name"
+        @click="option.callback"
+        class="option"
+      >
+        <!-- <span class="option-icon">🔹</span> -->
+        <span class="option-name">{{ option.name }}</span>
+      </div>
     </div>
+  </div>
 </template>
+
 <style scoped lang="sass">
-    @use "@/assets/styles/common"
-
-
+  @use "@/assets/styles/common"
 
   .options-menu
     position: absolute
@@ -31,40 +31,58 @@ const props = defineProps({
     left: 50%
     z-index: 999
     transform: translate(-50%, -50%)
-
-    background-color: common.$options-bg
+    background: common.$bg-gradient
     padding: 20px
-
+    border-radius: 10px
     display: flex
     flex-direction: column
-    gap: 20px
+    gap: 15px
+    width: 20vw
+    min-width: 280px
+    max-width: 300px   // Ensures menu stays within a reasonable width
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    box-shadow: 0px 8px 16px common.$box-shadow-color
+    color: common.$text-color
+    overflow: hidden      // Prevents overflow issues
 
-    width: 15vw
-    min-width: 250px
+  .options
+    display: flex
+    flex-direction: column
+    gap: 10px
+    align-items: flex-start
 
-    border: common.$border
-    color: common.$options-color
+  .option
+    display: flex
+    align-items: center
+    width: 100%
+    padding: 10px 15px
+    border-radius: 6px
+    cursor: pointer
+    background-color: rgba(255, 255, 255, 0.05)
+    transition: all 0.3s ease // Removed transform transition to prevent jumping
+    border: 1px solid transparent
+    box-sizing: border-box
+    justify-content: center
 
-    .options
-      flex-grow: 1
+    &:hover
+      background-color: common.$bg-color-2
+      color: common.$link-color
+      border: common.$border
 
-      display: flex
-      flex-direction: column
-      align-items: center
-      gap: 18px
+    .option-icon
+      margin-right: 8px
+      font-size: 1.2rem
 
-      .option
-        user-select: none
-        cursor: pointer
+    .option-name
+      font-size: 1rem
+      font-weight: 500
 
-    .header
-      text-align: center
-      cursor: default
-      margin: 0
-    
-    hr
-      border: 0
-      border-top: common.$border
-      width: 100%
-      margin: 0
+  .header
+    text-align: center
+    font-size: 1.3rem
+    font-weight: bold
+    cursor: default
+    color: common.$text-color
+    margin: 0
+    padding-bottom: 10px
 </style>

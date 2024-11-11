@@ -33,9 +33,7 @@ import Notification from './components/Notification.vue';
     </div>
   </div>
   <div class="main-container">
-    <div class="router-view">
-      <router-view></router-view>
-    </div>
+    <router-view></router-view>
   </div>
   <div class="footer"></div>
 </template>
@@ -49,7 +47,7 @@ import Notification from './components/Notification.vue';
     border-bottom: common.$border
     background-color: common.$bg-color
     font-weight: bold
-    color: common.$header-text-color
+    color: common.$text-color
     
     display: flex
     justify-content: space-between
@@ -82,7 +80,7 @@ import Notification from './components/Notification.vue';
           text-align: center
 
           a
-            color: common.$header-text-color
+            color: common.$text-color
             text-decoration: none
             padding: 20px
             text-align: center
@@ -93,7 +91,7 @@ import Notification from './components/Notification.vue';
             border-bottom: 1px solid transparent
 
             &:hover
-              border-bottom: 1px solid common.$header-text-color
+              border-bottom: 1px solid common.$text-color
 
             img
               max-height: 30px
@@ -107,12 +105,10 @@ import Notification from './components/Notification.vue';
     background-color: common.$bg-color
     width: 100%
     height: calc(100vh - common.$header-height)
-
-    // position: relative
-
-    .router-view
-      width: 100%
-      height: 100%
+    min-height: 410px
+    display: flex
+    align-items: center
+    justify-content: center
     
   .footer
     display: none
