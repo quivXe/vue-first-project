@@ -62,8 +62,8 @@ const emit = defineEmits([
         .home
             padding-right: 10px
             cursor: pointer
-            @extend %not-hovered
             box-sizing: border-box
+            @extend %not-hovered
 
             &:hover, &:last-child
                 @extend %nav-element-last-or-hovered

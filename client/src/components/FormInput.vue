@@ -41,14 +41,13 @@
           class="input"
         />
         <!-- Optional Tooltip Icon -->
-         <!-- TODO: Change icon (and maybe add class that that adds boxshadow when showTooltip == true)-->
         <span 
             v-if="info"
             class="info-icon"
             @mouseover="{ hideTooltip.stop(); _showTooltip = true }"
             @mouseleave="_showTooltip = false"
         >
-          ℹ️
+          <img src="@/assets/images/info.svg" alt="ℹ️">
           <Transition> <div v-if="_showTooltip" class="tooltip">{{ info }}</div> </Transition>
         </span>
       </div>
@@ -78,6 +77,12 @@
     cursor: pointer
     position: absolute
     left: calc(100% + 5px)
+    display: flex
+    align-items: center
+
+    img
+      height: 20px
+      margin: auto
   
   
   .tooltip 

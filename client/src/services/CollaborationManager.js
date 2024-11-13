@@ -93,7 +93,7 @@ class CollaborationManager {
             })
         })
     }
-    send(type, details, others) {
+    send(type, details) {
         return new Promise((resolve, reject) => {
             
             if (type !== "add" && type !== "update" && type !== "delete") {
@@ -137,7 +137,7 @@ class CollaborationManager {
             } else {
                 handleFetchError({ url, status: err.status });
             }
-        };
+        }
 
 
         const lastUpdate = getCookie(`lastUpdate-${this.collabName}`);

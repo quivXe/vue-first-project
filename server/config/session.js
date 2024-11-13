@@ -10,7 +10,7 @@ module.exports = session({
     rolling: true, // reset maxAge on every response
     cookie: {
         maxAge: 1800000, // session expires after 30 minutes of inactivity
-        secure: false, // TODO: temp
+        secure: false, // temp
         httpOnly: true,
         sameSite: 'Strict' // Ensures cookie is only sent in same-site requests
     } 

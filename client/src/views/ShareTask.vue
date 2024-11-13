@@ -74,7 +74,6 @@ async function validateAndGetPayload() {
     };
 }
 async function onSubmit() {
-  
   const payload = await validateAndGetPayload();
   if (!payload) {
     handleFetchError({url: "/api/collaborations/create", statusCode: 409}); // name is taken (locally)

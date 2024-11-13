@@ -153,7 +153,6 @@ indexedDBManager.getTasksByParentId(-1)
             right: 0
             top: 50%
             transform: translateY(-50%) translateX(100%)
-            display: flex
             align-items: center
             justify-content: center
             padding: 7px
@@ -164,7 +163,7 @@ indexedDBManager.getTasksByParentId(-1)
                 background-color: common.$bg-color-contrast-2
                 border-radius: 100%
                 padding: 10px
-                box-shadow: 0 0 3px 0px common.$box-shadow-color
+                box-shadow: 0 0 3px 0 common.$box-shadow-color
 
                 transition: all .2s ease-in-out
 

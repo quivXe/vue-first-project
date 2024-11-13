@@ -27,6 +27,7 @@ coverage
 
 *.py
 /output.txt
+todo.txt
 
 # Editor directories and files
 .vscode/*

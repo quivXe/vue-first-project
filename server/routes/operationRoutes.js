@@ -1,4 +1,4 @@
-// /server/routes/collabRoutes.js
+// /server/routes/operationRoutes.js
 const express = require('express');
 const { logOperation, getOperationsForCollab } = require('../controllers/operationController');
 const { collabAuthMiddleware } = require('../middlewares/collabAuthMiddleware');

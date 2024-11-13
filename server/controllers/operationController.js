@@ -25,7 +25,7 @@ const { Op } = require('sequelize');
  * @param {number} req.body.operationIndex - The index of the operation in the sequence.
  * @param {number} req.body.operation_part - The part number of the operation.
  * @param {number} req.body.operation_max_part - The maximum part number of the operation.
- * @param {number} req.body.socket_id - Socket that will be excluded from pusher trigger.
+ * @param {string} req.body.socket_id - Socket that will be excluded from pusher trigger.
  * @param {Object} res - The response object used to send responses to the client.
  * 
  * @example
@@ -58,16 +58,16 @@ exports.logOperation = async (req, res) => {
     return;
   }
   try {
-    const newOperation = await Operation.create({ 
-      collabName, 
-      operationType, 
+    const newOperation = await Operation.create({
+      collabName,
+      operationType,
       details,
-      operation_part, 
-      operation_max_part 
+      operation_part,
+      operation_max_part
     });
 
     if (operationType !== "init") {
-      
+
       /* -------------------- Send operation to pusher channel -------------------- */
       const eventData = {type: operationType, details, timestamp: newOperation.createdAt};
       pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id }).catch(err => {
@@ -75,11 +75,10 @@ exports.logOperation = async (req, res) => {
         console.log(err);
         return;
       })
-
     }
-    
+
     return res.status(201).json(newOperation);
-    
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
