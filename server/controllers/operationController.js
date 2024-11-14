@@ -43,7 +43,7 @@ const { Op } = require('sequelize');
 exports.logOperation = async (req, res) => {
   const { collabName, operationType, details, operation_part, operation_max_part, socket_id } = req.body;
 
-  if (!collabName || !operationType || !details || !operation_part || !operation_max_part) {
+  if (!collabName || !operationType || !details || !operation_part || !operation_max_part ) {
     res.status(400).json({ error: 'Invalid request body' });
     return;
   }
@@ -70,11 +70,14 @@ exports.logOperation = async (req, res) => {
 
       /* -------------------- Send operation to pusher channel -------------------- */
       const eventData = {type: operationType, details, timestamp: newOperation.createdAt};
-      pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id }).catch(err => {
+      let pusherErr = false;
+      pusher.trigger(`private-${collabName}`, "new-operation", eventData, { socket_id })
+          .catch(err => {
         res.status(500).json({ error: {pusherError: err} });
         console.log(err);
-        return;
+        pusherErr = true;
       })
+      if (pusherErr) return;
     }
 
     return res.status(201).json(newOperation);

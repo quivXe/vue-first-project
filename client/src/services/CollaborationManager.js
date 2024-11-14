@@ -1,5 +1,5 @@
 import { getPusher } from "./pusherClient";
-import { fetchPost } from '../utils/fetchUtil';
+import apiClient from '../utils/fetchUtil';
 import { setCookie, getCookie } from "../utils/cookieUtils";
 import { importTasks } from "../utils/taskTransferUtils";
 import { handleFetchError, redirect } from "../utils/handleErrorUtil";
@@ -59,27 +59,16 @@ class CollaborationManager {
 
         /* --------------- Answer for asking for current tasks version -------------- */
         this.pusher.bind("asked-for-current-version", () => {
-            console.log("someone asked for current version with socket_id", this.pusher.connection.socket_id);
-            const payload = {
-                type: "establish-connection",
-                collabName: this.collabName,
-                socket_id: this.pusher.connection.socket_id
-            }
-            const url = "/api/request-current";
-            fetchPost(url, payload)
-            .then(async () => { // connection established
 
+            const { url, json } = apiClient.versionConnectionRequest(this.collabName, this.pusher.connection.socket_id);
+            json
+            .then(async () => { // connection established
                 // Get local tasks
                 const tasksInCollab = await taskManager.indexedDBManager.getTasksByCollabName(this.collabName)  // TODO: compress it
-                
-                const payload = {
-                    type: "send-current-version",
-                    collabName: this.collabName,
-                    socket_id: this.pusher.connection.socket_id,
-                    tasks: tasksInCollab,
-                    timestamp: getCookie(`lastUpdate-${this.collabName}`)
-                }
-                fetchPost(url, payload)
+                let timestamp = getCookie(`lastUpdate-${this.collabName}`);
+
+                const { url, json } = apiClient.provideCurrentVersion(this.collabName, this.pusher.connection.socket_id, tasksInCollab, timestamp)
+                json
                 .catch(err => { // something went wrong
                     console.log(err);
                     handleFetchError({ url: url, statusCode: err.status });
@@ -99,20 +88,12 @@ class CollaborationManager {
             if (type !== "add" && type !== "update" && type !== "delete") {
                 reject("Provide corrent type (add | update | delete)");
             }
-    
-            const operation_part = 1;
-            const operation_max_part = 1;
-            const payload = {
-                collabName: this.collabName,
-                operationType: type,
-                details,
-                operation_part,
-                operation_max_part,
-                socket_id: this.pusher.connection.socket_id,
-            }
-    
-            const url = "/api/operations/log";
-            fetchPost(url, payload)
+
+            const { url, json } = apiClient.logOperation(this.collabName, type, details, {
+                socket_id : this.pusher.connection.socket_id
+            })
+
+            json
             .then(data => {
                 let timestamp = data.createdAt;
                 setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
@@ -158,14 +139,10 @@ class CollaborationManager {
             }
         }
 
-        const payload = {
-            collabName: this.collabName,
-            timestamp: lastUpdate
-        }
 
-        const url = "/api/operations/get";
+        const { url, json} = apiClient.getOperations(this.collabName, lastUpdate);
         try {
-            const data = await fetchPost(url, payload);
+            const data = await json;
             let timestamp = null;
             for (let operation of data.operations) {
                 if (operation.operationType === "init") continue;
@@ -173,27 +150,27 @@ class CollaborationManager {
                 timestamp = operation.createdAt;
             }
             if (timestamp) setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
-    
+
             return 1;
         }
 
         /* ------------------ Couldn't get operations from database ----------------- */
         catch(err) {
             if (err.status === 410) { // timestamp is not in the database
-                
+
                 try {
                     await this.requestCurrentVersion(collabIndexedDBManager);
                     return 1;
-                } 
+                }
                 catch ({nooneOnline, err, url}) {
                     handleRequestCurrentVersionError({nooneOnline, err, url});
                     return 0;
                 }
-                
+
             } else {
                 handleFetchError({ url: url, statusCode: err.status });
             }
-    
+
             return 0;
         }
     }
@@ -201,13 +178,8 @@ class CollaborationManager {
     requestCurrentVersion(collabIndexedDBManager) {
         return new Promise((mainResolve, mainReject) => {
 
-            const payload = {
-                type: "get-current-version",
-                collabName: this.collabName,
-                socket_id: this.pusher.connection.socket_id,
-            }
-            const url = "/api/request-current"
-            fetchPost(url, payload)
+            const { url, json } = apiClient.requestCurrentVersion(this.collabName, this.pusher.connection.socket_id)
+            json
             .then(serverResData => {
     
                 return new Promise((resolve, reject) => {

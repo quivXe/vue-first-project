@@ -1,6 +1,4 @@
 import { toRaw, ref } from 'vue';
-import IndexedDBManager from './IndexedDBManager';
-import CollaborationManager from './CollaborationManager';
 import { generateUUID } from '../utils/uuid';
 import { handleFetchError } from '../utils/handleErrorUtil';
 
@@ -13,7 +11,7 @@ function handleIdbError(text, error) {
 
   console.log(text);
   console.warn(error);
-};
+}
 
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
@@ -21,9 +19,9 @@ function handleIdbError(text, error) {
  * @typedef {Object} Task
  * 
  * @param {String} name
- * @param {Int} flexIndex - Flex position (order) in the column.
- * @param {Int} status - Has to be value from TaskManager.TASK_STATUSES
- * @param {Int} parentId - Id of task that is one tier above
+ * @param {Number} flexIndex - Flex position (order) in the column.
+ * @param {Number} status - Has to be value from TaskManager.TASK_STATUSES
+ * @param {Number} parentId - Id of task that is one tier above
  * @param {String} description
  * @param {String} [collabName=null] - The name of collaboration (if any). Defaults to null.
  * @param {string} [collabTaskId] - The id of task in collaboration (UUID).
@@ -209,7 +207,7 @@ class TaskManager {
     task.id = id;
   
     // Update current tasks if needed
-    if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);;
+    if (task.parentId === this.currentParentId) this.currentTasks.value.push(task);
 
   }  /**
    * Removes a task from indexedDBManager.
@@ -402,10 +400,6 @@ class TaskManager {
    * Updates the status and flex indexes after dragging.
    *
    * @async
-   * @param {Task} task - The task object to be updated.
-   * @param {String} newStatus - The new status for the task. Should be one of the TASK_STATUSES.
-   * @param {boolean} [fromUI=false] - Whether to send update to collaboration if in any.
-   * @returns {Promise<void>}
    * 
    * @param {Object} options
    * @param {Task} [options.draggedTask] - The dragged task (with new flexIndex and new status)
@@ -413,6 +407,7 @@ class TaskManager {
    * @param {number} [options.newStatus] - New status of dragged task.
    * @param {number} [options.newFlexIndex] - New flex index of dragged task.
    * @param {boolean} [options.fromUI] - Whether to send to collaboration if in any.
+   * @returns {Promise<void>}
    * 
    */
   async fixFlexIndexesAndSetStatus(options) {

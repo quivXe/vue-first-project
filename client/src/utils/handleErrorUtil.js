@@ -17,6 +17,17 @@ export function handleFetchError(details) {
         );
         return;
     }
+
+    /* ----------------------------- Login Time-out ---------------------------- */
+    else if (details.statusCode === 440) {
+        window.dispatchEvent(
+            new CustomEvent('show-notification', {
+                detail: "Session expired, please log in again."
+            })
+        );
+        redirect("/join");
+    }
+
     switch (details.url) {
 
         case "/api/collaborations/create":
@@ -113,16 +124,6 @@ export function handleFetchError(details) {
                     })
                 );
             }
-
-            /* ----------------------------- Session expired ---------------------------- */
-            else if (details.statusCode === 401) {
-                window.dispatchEvent(
-                    new CustomEvent('show-notification', {
-                        detail: "Session expired, please log in again."
-                    })
-                );
-                redirect("/join");
-            }
             
             /* ------------------------- Invalid operation type ------------------------- */
             /* ----------------- (shouldn't happen without breaking js) ----------------- */
@@ -153,16 +154,6 @@ export function handleFetchError(details) {
                 // handled locally in CollaborationManager.js
             }
 
-            /* ----------------------------- Session expired ---------------------------- */
-            else if (details.statusCode === 401) {
-                window.dispatchEvent(
-                    new CustomEvent('show-notification', {
-                        detail: "Session expired, please log in again."
-                    })
-                );
-                redirect("/join");
-            }
-
             /* -------------------------- Initial server error -------------------------- */
             else if (details.statusCode === 500) {
                 window.dispatchEvent(
@@ -184,28 +175,12 @@ export function handleFetchError(details) {
             }
             break;
 
-        case "/api/request-current":
-
-            /* ------- Data has already been provided / Establish connection first ------ */
-            // TODO: in requestCurrentController edit status code for establish connection first
-            if (details.statusCode === 409) {
-                // Nothing to do
-            }
-
-            /* ----------------------------- Session expired ---------------------------- */
-            else if (details.statusCode === 401) {
-                window.dispatchEvent(
-                    new CustomEvent('show-notification', {
-                        detail: "Session expired, please log in again."
-                    })
-                );
-                redirect("/join");
-            }
+        case "/api/version-controller/current-version":
 
             /* -------------------------- Internal server error ------------------------- */
-            else if (details.statusCode === 500) {
+            if (details.statusCode === 500) {
                 window.dispatchEvent(
-                    new CustonEvent('show-notification', {
+                    new CustomEvent('show-notification', {
                         detail: "Something went wrong, please log in again."
                     })
                 );
@@ -223,26 +198,78 @@ export function handleFetchError(details) {
                 redirect("/join");
             }
 
-
-
-            
-
             break;
 
-        case "/api/pusher/channel-auth":
+        case "/api/version-controller/provide/establish-connection":
 
-            /* ----------------------------- Session expired ---------------------------- */
-            if (details.statusCode === 401) {
+            // /* ------- Data has already been provided / Establish connection first ------ */
+            if (details.statusCode === 409) {
+                // Nothing to do
+            }
+
+            /* -------------------------- Internal server error ------------------------- */
+            if (details.statusCode === 500) {
                 window.dispatchEvent(
                     new CustomEvent('show-notification', {
-                        detail: "Session expired, please log in again."
+                        detail: "Something went wrong, please log in again."
                     })
                 );
                 redirect("/join");
             }
 
+            /* -------------------------- Invalid request body -------------------------- */
+            /* ------------------ (shoudn't happen without breaking js) ----------------- */
+            else if (details.statusCode === 400) {
+                window.dispatchEvent(
+                    new CustomEvent('show-notification', {
+                        detail: "Something went wrong, please log in again."
+                    })
+                );
+                redirect("/join");
+            }
+
+            break;
+
+        case "/api/version-controller/provide":
+
+
+
+            /* -------------------------- Internal server error ------------------------- */
+            if (details.statusCode === 500) {
+                window.dispatchEvent(
+                    new CustomEvent('show-notification', {
+                        detail: "Something went wrong, please log in again."
+                    })
+                );
+                redirect("/join");
+            }
+
+            /* -------------------------- Invalid request body -------------------------- */
+            /* ------------------ (shoudn't happen without breaking js) ----------------- */
+            else if (details.statusCode === 400) {
+                window.dispatchEvent(
+                    new CustomEvent('show-notification', {
+                        detail: "Something went wrong, please log in again."
+                    })
+                );
+                redirect("/join");
+            }
+
+            // Establish connection first (shouldn't happen without breaking js)
+            else if (details.statusCode === 409) {
+                // Nothing to do
+            }
+            // Unauthorized: wrong socket_id (shouldn't happend without breaking js)
+            else if (details.statusCode === 401) {
+                // Nothing to do
+            }
+
+            break;
+
+        case "api/pusher/channel-auth":
+
             /* ------------------------- Internal server errror ------------------------- */
-            else if (details.statusCode === 500) {
+            if (details.statusCode === 500) {
                 window.dispatchEvent(
                     new CustomEvent('show-notification', {
                         detail: "Something went wrong, please log in again."
@@ -262,6 +289,6 @@ export function handleFetchError(details) {
                 redirect("/join");
             }
 
-            break;      
-    };
+            break;
+    }
 }

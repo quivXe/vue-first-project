@@ -2,7 +2,7 @@
 import { useRoute, useRouter } from 'vue-router';
 import { ref } from 'vue';
 import IndexedDBManager from '../services/IndexedDBManager'
-import { fetchPost } from '../utils/fetchUtil';
+import apiClient from '../utils/fetchUtil';
 import Debounce from '../utils/debounce'
 import { migrateTaskTree } from '../utils/taskTransferUtils';
 import { setCookie } from '../utils/cookieUtils';
@@ -83,21 +83,19 @@ async function onSubmit() {
 
   loading.value = true;
 
-    fetchPost("/api/collaborations/create", payload)
+  const createCollabApiCall = apiClient.createCollaboration(payload.name, payload.password);
+  createCollabApiCall.json
     .then(async data => {
  
         // export whole task to collab store
         await migrateTaskTree(localIndexedDBManager, collabIndexedDBManager, data.name, taskIdFromRoute);
-        
-        const payload = {
-            collabName: data.name,
-            operationType: "init",
-            details: {},
-            operation_part: 1, 
-            operation_max_part: 1 
-        };
-        
-        fetchPost("/api/operations/log", payload)
+
+        const logOperationApiCall = apiClient.logOperation(
+            data.name,
+            "init",
+            {}
+        );
+        logOperationApiCall.json
         .then(operation => {
             setCookie(`lastUpdate-${data.name}`, operation.createdAt, { path: '/', expires: 365 });
             window.dispatchEvent(
@@ -109,13 +107,13 @@ async function onSubmit() {
         })
         .catch(err => {
             console.log("error while logging initial operation", err);
-            handleFetchError({ url: "/api/operations/log", statusCode: err.status });
+            handleFetchError({ url: logOperationApiCall.url, statusCode: err.status });
             loading.value = false;
         })
     })
     .catch(error => {
         console.log(error);
-        handleFetchError({ url: "/api/collaborations/create", statusCode: error.status });
+        handleFetchError({ url: createCollabApiCall.url, statusCode: error.status });
         loading.value = false;
     })
     

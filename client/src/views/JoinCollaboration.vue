@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchPost } from '../utils/fetchUtil';
+import apiClient from '../utils/fetchUtil';
 import { handleFetchError } from '../utils/handleErrorUtil';
 import FormInput from '@/components/FormInput.vue';
 import FormWrapper from '@/components/FormWrapper.vue';
@@ -20,26 +20,20 @@ function isNameCorrect() {
         
     // Allowed characters: letters, numbers, _ - = @ , . ;
     const regex = /^[a-zA-Z0-9_\-=@,.;]*$/;
-    if (!regex.test(collabName.value)) return false;
+    return regex.test(collabName.value);
 
-    return true;
+
 }
 
 function onSubmit() {
-    const url = '/api/collaborations/join';
-
-    const payload = {
-        name: collabName.value,
-        password: password.value
-    };
-    
     if (!isNameCorrect()) {
-        handleFetchError({ url, statusCode: 401 }) // Name or password incorrect
+        handleFetchError({ url: "/api/collaborations/join", statusCode: 401 }) // Name or password incorrect
         return;
     }
 
     loading.value = true;
-    fetchPost(url, payload)
+    const { url, json } = apiClient.joinCollaboration(collabName.value, password.value);
+    json
     .then(data => {
         collabName.value = '';
         password.value = '';

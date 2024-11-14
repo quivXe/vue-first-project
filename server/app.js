@@ -7,7 +7,7 @@ const { sequelize } = require('./models'); // Import Sequelize instance
 const collaborationRoutes = require('./routes/collaborationRoutes');
 const operationRoutes = require('./routes/operationRoutes');
 const pusherAuthRoute = require('./routes/pusherAuthRoute');
-const requestCurrentVersionRoute = require('./routes/requestCurrentVersionRoute');
+const requestCurrentVersionRoute = require('./routes/versionRoute');
 const createRateLimiter = require('./middlewares/rateLimiter');
 const session = require('./config/session');
 
