@@ -4,9 +4,6 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import Debounce from '../../../utils/debounce';
 
-// TODO: style for task.name in header
-// TODO: make it responsive
-
 marked.use({
     breaks: true
 })
@@ -93,7 +90,7 @@ onBeforeUnmount(() => {
         min-width: 250px
         padding: 15px
         background-color: common.$description-container-bg-color
-        box-shadow: 0px 0px 4px 2px common.$box-shadow-color-hover
+        box-shadow: 0 0 4px 2px common.$box-shadow-color-hover
         border-radius: 8px
         display: flex
         flex-direction: column

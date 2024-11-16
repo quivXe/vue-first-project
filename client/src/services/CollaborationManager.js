@@ -13,7 +13,7 @@ class CollaborationManager {
         }
         catch (error) {
             window.dispatchEvent(
-                new CustomEvent("collaboration-error", {
+                new CustomEvent("show-notification", {
                     detail: {
                         message: "Something went wrong, please try again."
                     }
@@ -41,8 +41,8 @@ class CollaborationManager {
     }
 
     /**
-     * 
-     * @param {TaskManager} taskManager 
+     *
+     * @param {TaskManager} taskManager
      */
     bind(taskManager) {
 
@@ -52,7 +52,7 @@ class CollaborationManager {
             const type = data.type;
             const details = data.details;
             const timestamp = data.timestamp;
-            
+
             this.handleOperation(type, details, taskManager);
             setCookie(`lastUpdate-${this.collabName}`, timestamp, { path: '/', expires: 365 });
         })
@@ -73,8 +73,8 @@ class CollaborationManager {
                     console.log(err);
                     handleFetchError({ url: url, statusCode: err.status });
                 })
-                
-                
+
+
             })
             .catch(err => { // someone was first or something went wrong
                 console.log(err);
@@ -84,9 +84,9 @@ class CollaborationManager {
     }
     send(type, details) {
         return new Promise((resolve, reject) => {
-            
+
             if (type !== "add" && type !== "update" && type !== "delete") {
-                reject("Provide corrent type (add | update | delete)");
+                reject("Provide correct type (add | update | delete)");
             }
 
             const { url, json } = apiClient.logOperation(this.collabName, type, details, {
@@ -126,15 +126,27 @@ class CollaborationManager {
         /* -- If there is no last update (first time launching this collaboration), - */
         /* ---------------- request current version from active users --------------- */
         if (!lastUpdate) {
-            
+
             try {
 
                 await this.requestCurrentVersion(collabIndexedDBManager);
                 return 1;
 
             } 
-            catch ({nooneOnline, err, url}) {
-                handleRequestCurrentVersionError({nooneOnline, err, url});
+            catch (errDetails) {
+                const { nooneOnline, err, url } = errDetails;
+
+                if (url) {
+                    handleRequestCurrentVersionError({nooneOnline, err, url});
+                } else {
+
+                    window.dispatchEvent(
+                        new CustomEvent('show-notification', {
+                            detail: "Something went wrong. Please try again."
+                        })
+                    )
+
+                }
                 return 0;
             }
         }
@@ -162,8 +174,18 @@ class CollaborationManager {
                     await this.requestCurrentVersion(collabIndexedDBManager);
                     return 1;
                 }
-                catch ({nooneOnline, err, url}) {
-                    handleRequestCurrentVersionError({nooneOnline, err, url});
+                catch (errDetails) {
+                    const { nooneOnline, err, url } = errDetails;
+
+                    if (url) handleRequestCurrentVersionError({ nooneOnline, err, url });
+                    else {
+
+                        window.dispatchEvent(
+                            new CustomEvent('show-notification', {
+                                detail: "Something went wrong. Please try again"
+                            })
+                        )
+                    }
                     return 0;
                 }
 
@@ -180,40 +202,52 @@ class CollaborationManager {
 
             const { url, json } = apiClient.requestCurrentVersion(this.collabName, this.pusher.connection.socket_id)
             json
-            .then(serverResData => {
-    
-                return new Promise((resolve, reject) => {
-    
-                    if (serverResData.ok) { // someone may provide current version - listen for it
+                .then(serverResData => {
+
+                    return new Promise((resolve, reject) => {
+
+                        if (serverResData.ok) { // someone may provide current version - listen for it
                             this.channel.bind("get-current-version", pusherData => {
                                 this.channel.unbind("get-current-version");
-                    
-                                if ( !pusherData.ok && pusherData.nooneOnline ) {
+
+                                if (!pusherData.ok && pusherData.nooneOnline) {
                                     reject({nooneOnline: true, err: null});
                                 }
                                 resolve(pusherData);
                             })
-                        
-                    } else {
-                        if (serverResData.message === "Noone to provide current version") {
-                            reject({ nooneOnline: true, err: null });
-                        }
-                    }
-    
-                })
-                
-            })
-            .then(async data => {
 
-                setCookie(`lastUpdate-${this.collabName}`, data.timestamp, { path: '/', expires: 365 });
-                const tasks = data.tasks;
-                await collabIndexedDBManager.deleteObjectsByCollabName(this.collabName);
-                await importTasks(collabIndexedDBManager, tasks);
-                mainResolve(data);
-            })
-            .catch(({ nooneOnline, err }) => { // err: {nooneOnline: true} OR http error while fetching
-                mainReject({ nooneOnline, err, url });
-            })
+                        } else {
+                            if (serverResData.message === "Noone to provide current version") {
+                                reject({nooneOnline: true, err: null});
+                            }
+                        }
+
+                    })
+
+                })
+                .then(async data => {
+
+                    try {
+                        // Delete previous tasks.
+                        await collabIndexedDBManager.deleteObjectsByCollabName(this.collabName);
+                        setCookie(`lastUpdate-${this.collabName}`, data.timestamp, {path: '/', expires: 365});
+                        const tasks = data.tasks;
+                        try {
+                            // Import new tasks.
+                            await importTasks(collabIndexedDBManager, tasks);
+                            mainResolve(data);
+                        } catch (err) { // Importing task error.
+                            mainReject({err: err, type: 'import-task-error'});
+                        }
+                    } catch (err) { // Idb error.
+                        mainReject({err: err, type: "idb-error"});
+                    }
+
+                })
+                .catch((errorDetails) => { // err: {nooneOnline: true} OR http error while fetching
+                    const { nooneOnline, err, url } = errorDetails;
+                    mainReject({nooneOnline, err, url});
+                });
 
             
         })

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch, ref, onUnmounted } from 'vue'
+import {onMounted, watch, ref, onUnmounted} from 'vue'
 import { useRoute } from 'vue-router'
 
 import {
@@ -20,30 +20,9 @@ import IndexedDBManager from '../services/IndexedDBManager.js'
 import CollaborationManager from '../services/CollaborationManager.js'
 import Debounce from '../utils/debounce.js';
 import { handleFetchError, redirect } from '../utils/handleErrorUtil.js';
+import {setCookie, getCookie, removeCookie} from "@/utils/cookieUtils.js";
 
-const freezeDescriptionTitle = () => {
-    const descContainer = document.querySelector('.description-container');
-    const title = descContainer.querySelector('.title');
-
-    // setting width in clone
-    const descContainerClone = descContainer.cloneNode(true);
-    descContainerClone.classList.add("description-container-clone");
-    descContainerClone.querySelector(".container").style.width = "30vw"; // update when style updates
-    descContainerClone.querySelector(".container").style.padding = "15px"; // update when
-    document.querySelector(".main-container .main").appendChild(descContainerClone);
-
-    // setting width in original while in transition
-    const w = descContainerClone.querySelector(".title").getBoundingClientRect().width;
-    title.style.minWidth = `${w}px`;
-}
-const unfreezeDescriptionTitle = () => {
-  const title = document.querySelector('.description-container .title');
-  title.style.minWidth = "unset";
-}
-
-const route = useRoute();
-let collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
-let collaborating = collabName !== null;
+// Managers
 
 let indexedDBManager = null;
 let taskManager = null;
@@ -51,18 +30,14 @@ let collabManager = null;
 const uiManager = new UIManager();
 
 const managersLoaded = ref(false);
-
 const initializeManagers = async () => {
   try {
-    // has to create new cuz it wasnt refreshed 
-    collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
-    collaborating = collabName !== null;
 
     /* ---------------------- Subscribing to pusher channel --------------------- */
     new Promise((resolve, reject) => {
       if (collaborating) {
         collabManager = new CollaborationManager(collabName);
-  
+
         collabManager.subscribe()
         .then(() => {
           resolve();
@@ -76,11 +51,15 @@ const initializeManagers = async () => {
       }
     })
     .then(async () => {
+
       // IDB
       indexedDBManager = new IndexedDBManager("TODO_APP", collaborating ? "collab_tasks" : "local_tasks");
 
+      // PARENT TREE FROM COOKIES
+      let parentTree = await getParentTreeFromCookie(collabName, indexedDBManager);
+
       // TASK MANAGER
-      taskManager = new TaskManager(indexedDBManager, collabManager);
+      taskManager = new TaskManager(indexedDBManager, collabManager, parentTree);
 
       // BIND PUSHER
       if (collaborating) collabManager.bind(taskManager);
@@ -93,12 +72,12 @@ const initializeManagers = async () => {
       if (collaborating) {
         hasOperationsBeenFetched = await collabManager.getOperationsFromDatabase(taskManager, indexedDBManager);
       }
-  
+
       // INITIALIZE TASK MANAGER
       await taskManager.init();
-      
+
       // FINISH BY DISPLAYING UI
-      managersLoaded.value = true && hasOperationsBeenFetched;
+      managersLoaded.value = hasOperationsBeenFetched;
     })
     .catch((err) => { // Catch subscribing pusher promise
       handleFetchError({ url: "/api/pusher/channel-auth", statusCode: err.status })
@@ -116,23 +95,132 @@ const initializeManagers = async () => {
   }
 }
 
-// check for route change ( from collab to local cuz it didnt refresh managers )
-watch(() => route.name, (newName, oldName) => {
+
+// Route / Collaboration name
+
+const route = useRoute();
+let { collabName, collaborating } = getCollaborationInfo(route);
+// check for route change ( from collab to local cuz it didnt trigger on(Un)Mounted )
+watch(() => route.name, async (newName, oldName) => {
   if ( newName !== oldName ) {
+    saveParentTreeToCookie(collabName, uiManager.parentTree);
+
     managersLoaded.value = false;
-    initializeManagers();
+    ({ collabName, collaborating } = getCollaborationInfo(route));
+    await initializeManagers();
   }
 })
 
-const debouncedMouseUp = new Debounce(() => uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle, 100);
-onMounted(async () => {
-  await initializeManagers(route);
 
+// Functions
+
+async function getParentTreeFromCookie(collabName=null, idb) {
+  const { prefix, separator } = getParentTreeCookiePrefixAndSeparator(collabName);
+
+  let parentTree = [];
+  const cookieName = `${prefix}-taskId-parent-tree`;
+  const cookieValue = getCookie(cookieName);
+  if (!cookieValue) return [];
+
+  // Get parent tree from idb based on IDs from cookie
+  let taskIds;
+  try {
+    taskIds = cookieValue.split(separator).map(id => parseInt(id));
+    parentTree = await idb.getObjectsByIds(taskIds);
+  } catch(err) {
+    removeCookie(cookieName);
+    return [];
+  }
+
+  if (parentTree.includes(undefined)) {
+    removeCookie(cookieName);
+    return [];
+  }
+
+  // Orders it cuz it may be not ordered as idb.getObjectsByIds() is async func.
+  parentTree = taskIds.map(id => parentTree.find(task => task.id === id));
+
+  return parentTree;
+}
+
+function saveParentTreeToCookie(collabName=null, parentTree) {
+  const taskIds = parentTree.map(task => task.id);
+
+  const { prefix, separator } = getParentTreeCookiePrefixAndSeparator(collabName);
+  const cookieName = `${prefix}-taskId-parent-tree`;
+  const cookieValue = taskIds.join(separator);
+  console.log(cookieValue);
+
+  setCookie(cookieName, cookieValue, { expires: 28, path: '/' });
+}
+
+/**
+ * Saves parent tree to cookie
+ */
+function beforeUnloadHandler() {
+  saveParentTreeToCookie(collabName, uiManager.parentTree);
+}
+
+// Helper functions
+function getCollaborationInfo(route) {
+  let collabName = route.name === "TaskCollaboration" ? route.params.collaborationName : null;
+  let collaborating = collabName !== null;
+  return { collabName, collaborating };
+}
+function getParentTreeCookiePrefixAndSeparator(collabName) {
+  const prefix = collabName === null ?
+      '#local' :
+      collabName;
+  console.log(prefix);
+  return { prefix, separator: "," };
+}
+
+// for-transition
+const freezeDescriptionTitle = () => {
+  const descContainer = document.querySelector('.description-container');
+  const title = descContainer.querySelector('.title');
+
+  // setting width in clone
+  const descContainerClone = descContainer.cloneNode(true);
+  descContainerClone.classList.add("description-container-clone");
+  descContainerClone.querySelector(".container").style.width = "30vw"; // update when style updates
+  descContainerClone.querySelector(".container").style.padding = "15px"; // update when
+  document.querySelector(".main-container .main").appendChild(descContainerClone);
+
+  // setting width in original while in transition
+  const w = descContainerClone.querySelector(".title").getBoundingClientRect().width;
+  title.style.minWidth = `${w}px`;
+}
+const unfreezeDescriptionTitle = () => {
+  const title = document.querySelector('.description-container .title');
+  title.style.minWidth = "unset";
+}
+
+
+// onMounted / onUnmounted
+
+const debouncedMouseUp = new Debounce(
+    () => uiManager.mouseReleasedToggle = !uiManager.mouseReleasedToggle, 100
+);
+onMounted(async () => {
+
+  // Initialize managers
+  await initializeManagers();
+
+  // Add event listeners
   document.addEventListener('mouseup', debouncedMouseUp.run);
+  window.addEventListener("beforeunload", beforeUnloadHandler); // Saves parent tree cookie before unload.
+
 });
 onUnmounted(() => {
+  // Remove event listeners
+  window.removeEventListener("mouseup", debouncedMouseUp.run);
+  window.removeEventListener("beforeunload", beforeUnloadHandler);
+
+  saveParentTreeToCookie(collabName, uiManager.parentTree);
   if (collaborating) collabManager.disconnect(); // Disconnect pusher to prevent bugs
 })
+
 </script>
 <template>
   <div v-if="!managersLoaded" class="loading-managers"> <Loading/> </div>
@@ -267,7 +355,7 @@ onUnmounted(() => {
     padding: 0 $main-padding
     align-items: stretch
     
-    box-shadow: 0px 0px 4px 1px common.$box-shadow-color
+    box-shadow: 0 0 4px 1px common.$box-shadow-color
 
     transition: all .1s ease
 

@@ -36,7 +36,7 @@ const debouncedStartDragging = new Debounce((task) => {
     emit("startDragging", task);
 }, CLICK_DRAG_DELAY_DELTA);
 
-var taskPressed = false;
+let taskPressed = false;
 
 onMounted(() => {
     if (props.createNew) {
@@ -109,6 +109,8 @@ watch(() => props.mouseReleasedToggle, () => {
             @mousedown="onTaskPressed(task)"
         >
             <span>{{ task.name }}</span>
+<!--          temp-->
+            <span> {{ task.id }}</span>
         </div>
 
         <div

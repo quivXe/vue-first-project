@@ -28,6 +28,7 @@ coverage
 *.py
 /output.txt
 todo.txt
+gitDiff.txt
 
 # Editor directories and files
 .vscode/*

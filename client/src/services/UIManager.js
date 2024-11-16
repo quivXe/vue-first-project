@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import TaskManager from './TaskManager';
+import {useConfirm} from "@/composables/useConfirm.js";
 
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
@@ -17,8 +17,6 @@ class UIManager {
   /**
    * Creates an instance of UIManager.
    *
-   * @constructor
-   * @param {TaskManager} taskManager - An instance of TaskManager to manage tasks.
    */
   constructor() {
     this.taskManager;
@@ -61,7 +59,6 @@ class UIManager {
     this.taskManager = taskManager;
     this._currentTasks = this.taskManager.currentTasks;
     this._parentTree = this.taskManager.parentTree;
-    console.log("init", this._parentTree.value);
   }
 
   get currentTasks() { return this._currentTasks.value; }
@@ -179,7 +176,17 @@ class UIManager {
         {
           name: "Delete", callback: () => {
             this.showOptions = false;
-            this.deleteTaskClicked(task);
+
+            useConfirm({
+              title: "Delete Collaboration",
+              message: `Are you sure you want to delete '${task.name}'? You will not be able to undo this action.`
+            })
+                .then(() => {
+                  this.deleteTaskClicked(task);
+                })
+                .catch(() => {
+                  console.log("cancel");
+                })
           }
         },
         {
@@ -240,6 +247,7 @@ class UIManager {
   pushParent(task) {
     this._parentTree.value.push(task);
     this.taskManager.updateCurrentTasks({ parent: task });
+
   }
 
   /**

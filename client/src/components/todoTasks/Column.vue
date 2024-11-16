@@ -37,13 +37,13 @@ const emit = defineEmits([
         border-radius: 15px
         border: common.$border
         overflow: hidden
-        box-shadow: 0px 0px 4px 1px common.$box-shadow-color
+        box-shadow: 0 0 4px 1px common.$box-shadow-color
 
         transition: all .1s ease-in-out
 
         &:hover
             transform: scale(1.003)
-            box-shadow: 0 0 2px 0px common.$box-shadow-color-hover
+            box-shadow: 0 0 2px 0 common.$box-shadow-color-hover
 
             .column-header
                 background-color: common.$bg-color-contrast-2

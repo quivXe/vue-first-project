@@ -17,7 +17,24 @@ function deleteCollab(collabName) {
         message: `Are you sure you want to delete '${collabName}'? It will erase your local copy, but you can still login to it later.`
     })
     .then(() => {
-        console.log("delete"); // TODO
+        // Delete all tasks collaboration.
+        indexedDBManager.deleteObjectsByCollabName(collabName)
+            .then(() => {
+              collabNames.value.delete(collabName);
+              window.dispatchEvent(
+                  new CustomEvent('show-notification', {
+                    detail: 'Collaboration deleted.'
+                  })
+              )
+            })
+            .catch((err) => {
+              console.warn(err);
+              window.dispatchEvent(
+                  new CustomEvent('show-notification', {
+                    detail: "Something went wrong."
+                  })
+              );
+            })
     })
     .catch(() => {
         console.log("cancel");
@@ -48,14 +65,14 @@ indexedDBManager.getTasksByParentId(-1)
         new collaboration or share your own
         <router-link to="/">here</router-link>.
     </p>
-  
+
       <Loading v-if="loading"/>
       <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-  
+
       <p v-if="!loading && collabNames && collabNames.size === 0" class="empty-message">
         No collaborations found.
       </p>
-  
+
       <div class="links" v-if="!loading && collabNames">
           <router-link
             v-for="collabName in collabNames"
@@ -71,7 +88,7 @@ indexedDBManager.getTasksByParentId(-1)
       </div>
     </div>
   </template>
-  
+
 <style lang="sass" scoped>
 @use "@/assets/styles/common"
 

@@ -26,9 +26,9 @@ div
     
 
     img
-        font-family: 'Comic Sans MS'
-        font-size: 1.85em
-        color: common.$text-color
+      font-family: 'Comic Sans MS', serif
+      font-size: 1.85em
+      color: common.$text-color
 
     &:hover
         @extend %hovered

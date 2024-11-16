@@ -49,6 +49,7 @@ const handleBackgroundClick = (event) => {
   
   <style scoped lang="sass">
   @use "@/assets/styles/common"
+  @use "sass:color"
   
   * 
     margin: 0
@@ -120,7 +121,7 @@ const handleBackgroundClick = (event) => {
     transition: background-color 0.2s
 
     &:hover
-      background-color: darken(common.$notification-bg-color, 10%)
+      background-color: color.adjust(common.$notification-bg-color, $lightness: -10%)
   
   .btn-confirm
     background-color: common.$bg-color-contrast
@@ -128,7 +129,7 @@ const handleBackgroundClick = (event) => {
     transition: background-color 0.2s
 
     &:hover
-      background-color: lighten(common.$bg-color-contrast, 10%)
+      background-color: color.adjust(common.$bg-color-contrast, $lightness: 10%)
   
   // Transition effect for modal fade
   .modal-fade-enter-active, .modal-fade-leave-active

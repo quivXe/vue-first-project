@@ -23,7 +23,7 @@ const emit = defineEmits([
     @use "@/assets/styles/common"
     div
         font-size: 5em
-        font-family: 'Comic Sans MS'
+        font-family: 'Comic Sans MS', serif
         cursor: pointer
 
         width: 24px

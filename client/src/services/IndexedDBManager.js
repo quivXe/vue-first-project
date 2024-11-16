@@ -3,6 +3,7 @@ import { openDB } from 'idb';
 const VERSION = 3;
 
 /**
+ * @class IndexedDBManager
  * Manages interactions with IndexedDB for storing and retrieving tasks.
  */
 class IndexedDBManager {
@@ -71,6 +72,16 @@ class IndexedDBManager {
     async getObjectById(id) {
         const db = await this.dbPromise;
         return await db.get(this.storeName, id);
+    }
+
+    /**
+     * Retrieves objects by theirs IDs.
+     * @param {Number[]} ids
+     * @returns {Promise<Task[]>}
+     */
+    async getObjectsByIds(ids) {
+        const db = await this.dbPromise;
+        return Promise.all(ids.map(id => db.get(this.storeName, id)));
     }
 
     /**

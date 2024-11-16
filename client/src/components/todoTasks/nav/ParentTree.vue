@@ -1,18 +1,33 @@
 <script setup>
 
+import {onMounted, onUnmounted, useTemplateRef} from "vue";
+
 const props = defineProps({
-    parents: Array
+    parents: Array,
 })
 const emit = defineEmits([
     "parentClicked"
 ])
 
+function scrollToLastElement() {
+  container.value.lastElementChild?.scrollIntoView({behavior: "smooth", inline: "end"});
+}
 
+const container = useTemplateRef('container');
+let containerObserver = new MutationObserver(scrollToLastElement);
+
+onMounted(() => {
+  containerObserver.observe(container.value, { childList: true });
+});
+
+onUnmounted(() => {
+  containerObserver.disconnect();
+})
 
 </script>
 
 <template>
-    <div class="container">
+    <div class="container" ref="container">
         <div 
             @click="emit('parentClicked', null)"
             class="home">

@@ -17,7 +17,6 @@ export function handleFetchError(details) {
         );
         return;
     }
-
     /* ----------------------------- Login Time-out ---------------------------- */
     else if (details.statusCode === 440) {
         window.dispatchEvent(

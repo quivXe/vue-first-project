@@ -15,7 +15,6 @@ const props = defineProps({
         @click="option.callback"
         class="option"
       >
-        <!-- <span class="option-icon">🔹</span> -->
         <span class="option-name">{{ option.name }}</span>
       </div>
     </div>
@@ -41,7 +40,7 @@ const props = defineProps({
     min-width: 280px
     max-width: 300px   // Ensures menu stays within a reasonable width
     border: 1px solid rgba(255, 255, 255, 0.1)
-    box-shadow: 0px 8px 16px common.$box-shadow-color
+    box-shadow: 0 8px 16px common.$box-shadow-color
     color: common.$text-color
     overflow: hidden      // Prevents overflow issues
 
@@ -68,10 +67,6 @@ const props = defineProps({
       background-color: common.$bg-color-2
       color: common.$link-color
       border: common.$border
-
-    .option-icon
-      margin-right: 8px
-      font-size: 1.2rem
 
     .option-name
       font-size: 1rem

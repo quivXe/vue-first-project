@@ -117,7 +117,7 @@ class TaskManager {
   }
 
   /**
-   * Retrieves tasks array from the indexedDBManager using the given parent ID. If collaborating, it search in collaboration.
+   * Retrieves tasks array from the indexedDBManager using the given parent ID. If collaborating, it searches in collaboration.
    * 
    * @param {number} parentId - The ID of the parent
    * @returns {Promise<Task[]>} Array of tasks that match given parentId 

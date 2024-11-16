@@ -16,16 +16,14 @@ export async function migrateTaskTree (localIndexedDBManager, collabIndexedDBMan
         parent.collabName = collabName;
         parent.parentId = newParentId;
         parent.collabTaskId = generateUUID();
-    
-        const createdParentId = await collabIndexedDBManager.addObject(parent);
-    
+
         const addChildrenPromise = localIndexedDBManager.getTasksByParentId(parentId).then(children => {
             return Promise.all( children.map(child => migrateRec( child.id, parent.collabTaskId )) );
         });
         return addChildrenPromise;
     }
     return migrateRec(parentId, newParentId);
-}; 
+}
 
 /**
  * Imports a list of tasks into the IndexedDB.
