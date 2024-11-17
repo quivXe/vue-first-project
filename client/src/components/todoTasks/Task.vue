@@ -2,12 +2,10 @@
 import { ref, watch, onMounted, nextTick } from 'vue'
 import Debounce from '../../utils/debounce';
 
-const CLICK_DRAG_DELAY_DELTA = 350;
-
 const props = defineProps({
     task: Object,
     mouseReleasedToggle: Boolean,
-    _dragging: Boolean,
+    _holding: Boolean,
     createNew: {
         type: Boolean,
         default: false
@@ -15,70 +13,88 @@ const props = defineProps({
     changeName: {
         type: Boolean,
         default: false
-    }
+    },
+    isTouchScreen: Boolean
 })
 const emit = defineEmits([
     "taskClicked",
-    "deleteTask",
     "mouseOverTask",
-    "startDragging",
-    "stopDragging",
+    "startHold",
+    "stopHold",
     "newTaskBlur",
     "changeNameBlur",
     "optionsClicked"
 ])
-const dragging = ref(props._dragging); // ensure that even if item is rerendered, it maintain same dragging value
-const inputTaskValue = ref("");
-const inputTaskRef = ref(null);
 
-const debouncedStartDragging = new Debounce((task) => {
-    dragging.value = true;
-    emit("startDragging", task);
-}, CLICK_DRAG_DELAY_DELTA);
 
+// <!--      ╭──────────────────────────────────────────────────────────╮      -->
+// <!--      │                 HOLDING / CLICKING TASK                  │      -->
+// <!--      ╰──────────────────────────────────────────────────────────╯      -->
+
+const CLICK_HOLD_DELAY_DELTA = 350; // Time in ms after which click becomes holding.
+
+const debouncedHold = new Debounce((task) => {
+  holding.value = true;
+  emit("startHold", task);
+}, CLICK_HOLD_DELAY_DELTA);
+
+const holding = ref(props._holding); // ensure that even if item is rerendered, it maintain same holding value
 let taskPressed = false;
-
-onMounted(() => {
-    if (props.createNew) {
-        inputTaskValue.value= "New task";
-        nextTick(() => {
-            inputTaskRef.value.focus();
-            inputTaskRef.value.select();
-        })
-    }
-})
-watch(() => props.changeName, (changeName) => {
-    inputTaskValue.value = props.task.name
-    nextTick(() => {
-        if (changeName) {
-            inputTaskRef.value.focus();
-            inputTaskRef.value.select();
-        }
-    })
-})
 
 function onTaskPressed(task) {
     taskPressed = true;
-    debouncedStartDragging.run(task);
+    debouncedHold.run(task);
 }
+
 function releaseTask(task) {
     taskPressed = false;
 
-    // timeout hasnt fired yet - counts as click, not drag
-    if (!dragging.value) {
-        debouncedStartDragging.stop();
+    // timeout hasnt fired yet - counts as click, not hold
+    if (!holding.value) {
+        debouncedHold.stop();
         emit('taskClicked', task);
     } 
 
-    // dragging started
+    // holding started
     else {
-        emit('stopDragging', task);
+        emit('stopHold', task);
     }
-    dragging.value = false;
+    holding.value = false;
 }
+
+/**
+ * Function mainly for handling updating flex index by UI Manager
+ */
 function mouseOverContainer(task) {
     emit('mouseOverTask', task)
 }
+
+// checking for holding cuz when changing column, task rerenders itself and taskPressed is false, but holding is passed by parent
+watch(() => props.mouseReleasedToggle, () => {
+  if (holding.value || taskPressed) {
+    releaseTask(props.task)
+  }
+})
+
+
+
+// <!--      ╭──────────────────────────────────────────────────────────╮      -->
+// <!--      │                      CHANGING NAME                       │      -->
+// <!--      ╰──────────────────────────────────────────────────────────╯      -->
+
+const inputTaskValue = ref("");
+const inputTaskRef = ref(null);
+
+watch(() => props.changeName, (changeName) => {
+  inputTaskValue.value = props.task.name
+  nextTick(() => {
+    if (changeName) {
+      inputTaskRef.value.focus();
+      inputTaskRef.value.select();
+    }
+  })
+})
+
 function onInputTaskBlur() {
     if (inputTaskValue.value === "") return;
     inputTaskValue.value = inputTaskValue.value.trim().slice(0, 500);
@@ -86,11 +102,14 @@ function onInputTaskBlur() {
     else if (props.createNew) emit("newTaskBlur", inputTaskValue.value);
 }
 
-watch(() => props.mouseReleasedToggle, () => {
-    // checking for dragging cuz when changing column, task rerenders itself and taskPressed is false, but dragging is passed by parent
-    if (dragging.value || taskPressed) {
-        releaseTask(props.task)
-    }
+onMounted(() => {
+  if (props.createNew) {
+    inputTaskValue.value= "New task";
+    nextTick(() => {
+      inputTaskRef.value.focus();
+      inputTaskRef.value.select();
+    })
+  }
 })
 
 </script>
@@ -98,7 +117,7 @@ watch(() => props.mouseReleasedToggle, () => {
 <template>
     <div
         class="container"
-        :class="{ dragging: dragging }"
+        :class="{ dragging: holding && !isTouchScreen }"
         :style="{ order: !createNew ? task.flexIndex : 9999 }"
         @mouseover="!createNew ? mouseOverContainer(task) : null"
     >
@@ -106,11 +125,11 @@ watch(() => props.mouseReleasedToggle, () => {
         <div
             v-if="!createNew && !changeName"
             class="tile-content"
-            @mousedown="onTaskPressed(task)"
+            :class="{ 'is-touch-screen': isTouchScreen }"
+            @mousedown.prevent="onTaskPressed(task)"
+            @touchstart.prevent="onTaskPressed(task)"
         >
             <span>{{ task.name }}</span>
-<!--          temp-->
-            <span> {{ task.id }}</span>
         </div>
 
         <div
@@ -127,6 +146,7 @@ watch(() => props.mouseReleasedToggle, () => {
         </div>
 
         <div
+            v-if="!isTouchScreen"
             class="options"
             @click="emit('optionsClicked', task)"
         ><img src="@/assets/images/more.svg" alt="more"></div>
@@ -184,7 +204,14 @@ watch(() => props.mouseReleasedToggle, () => {
 
             span
                 @extend %not-hovered
-        
+
+        .tile-content.is-touch-screen
+          padding-right: 10px
+
+          span
+            margin: auto
+            text-align: center
+
         .options
             display: flex
             align-items: center
@@ -198,6 +225,7 @@ watch(() => props.mouseReleasedToggle, () => {
                 transform: scale(1.1)
 
                 @extend %hovered
+
         
     .container.dragging
         transform: scale(.8)

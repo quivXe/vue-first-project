@@ -1,4 +1,4 @@
-export function isTouchscreen() {
+export function isTouchScreen() {
     let hasTouchScreen = false;
     if ("maxTouchPoints" in navigator) {
         hasTouchScreen = navigator.maxTouchPoints > 0;

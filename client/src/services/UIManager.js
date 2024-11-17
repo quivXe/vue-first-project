@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {useConfirm} from "@/composables/useConfirm.js";
+import {isTouchScreen} from "@/utils/isTouchscreen.js";
 
 /**
  * Task object, stored in indexedDB, and displayed by UIManager
@@ -31,6 +32,7 @@ class UIManager {
 
     this.optionsMenuData = {};
     this.draggedTask = null;
+    this.isTouchScreen = isTouchScreen(); // TODO: maybe make it ref idk
 
     // Bind methods to the instance
     this.taskClicked = this.taskClicked.bind(this);
@@ -41,8 +43,8 @@ class UIManager {
     this.newTaskBlur = this.newTaskBlur.bind(this);
     this.mouseOverTask = this.mouseOverTask.bind(this);
     this.mouseOverColumn = this.mouseOverColumn.bind(this);
-    this.startDraggingTaskTriggered = this.startDraggingTaskTriggered.bind(this);
-    this.stopDraggingTaskTriggered = this.stopDraggingTaskTriggered.bind(this);
+    this.startHoldingTaskTriggered = this.startHoldingTaskTriggered.bind(this);
+    this.stopHoldingTaskTriggered = this.stopHoldingTaskTriggered.bind(this);
     this.taskOptionsClicked = this.taskOptionsClicked.bind(this);
     this.getCurrentParent = this.getCurrentParent.bind(this);
     this.pushParent = this.pushParent.bind(this);
@@ -202,23 +204,52 @@ class UIManager {
         }
       ]
     };
+
+    if (this.isTouchScreen) {
+      // Add option to move to task statuses.
+      for (const statusKey in this.TASK_STATUSES) {
+        const statusValue = this.TASK_STATUSES[statusKey];
+
+        // Skip the current status of the task
+        if (task.status === statusValue) {
+          continue;
+        }
+
+        // Add an option for changing the task's status
+        this.optionsMenuData.options.push({
+          name: `Move to ${statusKey}`, // Use the key name for the menu label
+          callback: () => {
+            this.showOptions = false; // Hide options menu
+            task.status = statusValue; // Update task's status
+            task.flexIndex = 9999; // Set a high flex index
+            this.taskManager.fixFlexIndexesAndSetStatus({
+              draggedTask: task,
+            });
+          },
+        });
+      }
+    }
   }
 
   /**
-   * Handles the event when a task starts being dragged.
+   * Handles the event when a task starts being held.
    *
-   * @param {Task} task - The task object that is being dragged.
+   * @param {Task} task - The task object that is being held.
    */
-  startDraggingTaskTriggered(task) {
-    this.draggedTask = this.currentTasks.find(t => t.id == task.id);
+  startHoldingTaskTriggered(task) {
+    if (this.isTouchScreen) {
+      this.taskOptionsClicked(task);
+    } else {
+      this.draggedTask = this.currentTasks.find(t => t.id == task.id);
+    }
   }
 
   /**
-   * Handles the event when dragging stops.
+   * Handles the event when holding stops.
    *
-   * @param {Task} task - The task object that was dragged.
+   * @param {Task} task - The task object that was held.
    */
-  stopDraggingTaskTriggered(task) {
+  stopHoldingTaskTriggered(task) {
     this.draggedTask = null;
 
     this.taskManager.fixFlexIndexesAndSetStatus({draggedTask: task, fromUI: true});

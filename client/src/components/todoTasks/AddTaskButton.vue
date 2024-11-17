@@ -1,5 +1,9 @@
 <script setup>
 
+defineProps({
+  "centerText": Boolean,
+});
+
 const emit = defineEmits([
     "click"
 ])
@@ -9,7 +13,7 @@ const emit = defineEmits([
         @click="emit('click')"
         class="container"
     >
-        <div class="content">Add task</div>
+        <div class="content" :style="{ 'text-align': centerText ? 'center' : 'left' } ">Add task</div>
     </div>
 </template>
 

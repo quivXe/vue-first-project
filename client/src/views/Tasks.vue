@@ -209,12 +209,14 @@ onMounted(async () => {
 
   // Add event listeners
   document.addEventListener('mouseup', debouncedMouseUp.run);
-  window.addEventListener("beforeunload", beforeUnloadHandler); // Saves parent tree cookie before unload.
+  document.addEventListener('touchend', debouncedMouseUp.run);
+  window.addEventListener("beforeunload", beforeUnloadHandler); // Saves parent tree cookie before unload
 
 });
 onUnmounted(() => {
   // Remove event listeners
   window.removeEventListener("mouseup", debouncedMouseUp.run);
+  window.removeEventListener("touchend", debouncedMouseUp.run);
   window.removeEventListener("beforeunload", beforeUnloadHandler);
 
   saveParentTreeToCookie(collabName, uiManager.parentTree);
@@ -224,7 +226,7 @@ onUnmounted(() => {
 </script>
 <template>
   <div v-if="!managersLoaded" class="loading-managers"> <Loading/> </div>
-  <div class="wrapper" v-if="managersLoaded">
+  <div class="wrapper" v-if="managersLoaded" @contextmenu.prevent="">
 
     <div class="nav">
       <BackButton
@@ -246,20 +248,21 @@ onUnmounted(() => {
         >
           <AddTaskButton
             v-if="taskStatusNumber === uiManager.TASK_STATUSES.TODO"
+            :center-text="uiManager.isTouchScreen"
             @click="uiManager.addTaskClicked"/>
           <Task
             v-for="task in uiManager.currentTasks.filter(t => t.status === taskStatusNumber)"
             :key="task.id"
             :task="task"
             :mouse-released-toggle="uiManager.mouseReleasedToggle"
-            :_dragging="task.id === uiManager.draggedTask?.id"
+            :_holding="task.id === uiManager.draggedTask?.id"
             :change-name="uiManager.changingTaskName?.id === task.id"
             :style="{ 'order': task.flexIndex }"
+            :is-touch-screen="uiManager.isTouchScreen"
             @task-clicked="uiManager.taskClicked"
-            @delete-task="uiManager.deleteTaskClicked"
             @mouse-over-task="uiManager.mouseOverTask"
-            @start-dragging="uiManager.startDraggingTaskTriggered"
-            @stop-dragging="uiManager.stopDraggingTaskTriggered"
+            @start-hold="uiManager.startHoldingTaskTriggered"
+            @stop-hold="uiManager.stopHoldingTaskTriggered"
             @options-clicked="uiManager.taskOptionsClicked"
             @change-name-blur="uiManager.changeTaskName"
           />
