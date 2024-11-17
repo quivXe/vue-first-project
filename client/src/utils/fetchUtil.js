@@ -123,6 +123,7 @@ const apiClient = {
      * @returns {{url: string, json: Promise<Object>}} An object containing the URL and the request promise with data.
      */
     logOperation(collabName, operationType, details, others) {
+        if (!others) others = {};
         let payload = {
             collabName,
             operationType,

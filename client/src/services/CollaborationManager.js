@@ -23,7 +23,7 @@ class CollaborationManager {
         }
 
     }
-    
+
     subscribe() {
         this.channel = this.pusher.subscribe(`private-${this.collabName}`);
         return new Promise((resolve, reject) => {
@@ -132,7 +132,7 @@ class CollaborationManager {
                 await this.requestCurrentVersion(collabIndexedDBManager);
                 return 1;
 
-            } 
+            }
             catch (errDetails) {
                 const { nooneOnline, err, url } = errDetails;
 
@@ -201,6 +201,9 @@ class CollaborationManager {
         return new Promise((mainResolve, mainReject) => {
 
             const { url, json } = apiClient.requestCurrentVersion(this.collabName, this.pusher.connection.socket_id)
+            // Request current version and handle noone online response.
+            // Resolves with pusherData
+            // Rejects with { nooneOnline: boolean, err }
             json
                 .then(serverResData => {
 
@@ -245,11 +248,11 @@ class CollaborationManager {
 
                 })
                 .catch((errorDetails) => { // err: {nooneOnline: true} OR http error while fetching
-                    const { nooneOnline, err, url } = errorDetails;
+                    const {nooneOnline, err} = errorDetails;
                     mainReject({nooneOnline, err, url});
                 });
 
-            
+
         })
 
     }
@@ -265,18 +268,18 @@ class CollaborationManager {
                     fromUI: false
                 });
                 break;
-    
+
             case "update":
-                
+
                 if (details.type === "name") {
                     taskManager.changeTaskName({
                         taskId: details.taskId,
                         newName: details.newName,
-                        fromUI: false 
+                        fromUI: false
                     });
                 }
                 else if (details.type === "description") {
-                    taskManager.updateDescription({ 
+                    taskManager.updateDescription({
                         taskId: details.taskId,
                         newDescription: details.newDescription,
                         fromUI: false
@@ -288,7 +291,7 @@ class CollaborationManager {
                     newFlexIndex: details.newFlexIndex
                 });
                 break;
-            
+
             case "delete":
                 taskManager.removeTask({ taskId: details.taskId, fromUI: false })
                 break;

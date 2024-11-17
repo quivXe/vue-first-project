@@ -313,6 +313,10 @@ onUnmounted(() => {
 
   $main-padding: 10px
 
+  $nav-height: 70px
+  // $main-padding*3 cuz top and bottom padding + gap between main and nav
+  $main-height: calc(100vh - common.$header-height - $nav-height - $main-padding * 3)
+
   *
     box-sizing: border-box
 
@@ -328,12 +332,12 @@ onUnmounted(() => {
     display: flex
     justify-content: center
     align-items: center
-    height: common.$main-height
+    height: $main-height
     color: common.$text-color
 
   .wrapper
     display: flex
-    height: 100%
+    //height: 100%
     width: 100%
     flex-direction: column
     gap: $main-padding
@@ -344,8 +348,7 @@ onUnmounted(() => {
   .nav
     display: flex
 
-    height: common.$nav-height
-    background-color: common.$bg-color
+    height: $nav-height
     background: linear-gradient(135deg, common.$bg-color-2, common.$bg-color)
 
     gap: $main-padding
@@ -354,7 +357,7 @@ onUnmounted(() => {
     border-radius: 15px
     padding: 0 $main-padding
     align-items: stretch
-    
+
     box-shadow: 0 0 4px 1px common.$box-shadow-color
 
     transition: all .1s ease
@@ -364,8 +367,8 @@ onUnmounted(() => {
 
     display: flex
 
-    height: common.$main-height
-    min-height: 300px
+    height: $main-height
+    //min-height: 300px
 
     background-color: common.$bg-color
     color: common.$text-color
@@ -394,7 +397,7 @@ onUnmounted(() => {
 
     background-color: common.$overlay-color
     opacity: .7
-  
+
   .description-overlay
     @extend %overlay
 
@@ -404,7 +407,7 @@ onUnmounted(() => {
   .description-transition-enter-active, .description-transition-leave-active
       transition: all .4s ease-in-out
       overflow: hidden
-    
+
   .description-transition-enter-from,
   .description-transition-leave-to
       opacity: 0
@@ -423,7 +426,7 @@ onUnmounted(() => {
       min-width: 250px
 </style>
 
-<style> 
+<style>
 /* for width calculation in transition */
   .description-container-clone {
       visibility: hidden;

@@ -23,6 +23,7 @@ div
     align-items: center
     user-select: none
     @extend %not-hovered
+    padding: 0 .5rem
     
 
     img

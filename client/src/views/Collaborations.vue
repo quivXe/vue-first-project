@@ -94,7 +94,7 @@ indexedDBManager.getTasksByParentId(-1)
 
 .container
     color: common.$text-color
-    padding: 20px 0
+    padding: 20px 1rem
     box-sizing: border-box
     display: flex
     flex-direction: column

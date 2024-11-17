@@ -1,6 +1,7 @@
 <script setup>
 
 import Notification from './components/Notification.vue';
+import MainNavigation from "@/components/MainNavigation.vue";
 
 </script>
 <template>
@@ -9,28 +10,7 @@ import Notification from './components/Notification.vue';
     <div class="logo">
       <router-link to="/"><img src="@/assets/images/logo.svg" alt="Logo"></router-link>
     </div>
-    <div class="main-nav">
-      <ul>
-        <li>
-          <router-link :key="$route.fullPath" to="/">
-            <img src="@/assets/images/local_tasks.svg" alt="">
-            <span>Your tasks</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/collaborations">
-            <img src="@/assets/images/shared_tasks.svg" alt="">
-            <span>Collaborations</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/join">
-            <img src="@/assets/images/join1.svg" alt="">
-            <span>Connect</span>
-          </router-link>
-        </li>
-      </ul>
-    </div>
+    <MainNavigation />
   </div>
   <div class="main-container">
     <router-view></router-view>
@@ -53,6 +33,8 @@ import Notification from './components/Notification.vue';
     justify-content: space-between
     align-items: center
 
+    position: relative
+
     *
       height: 100%
       box-sizing: border-box
@@ -60,56 +42,24 @@ import Notification from './components/Notification.vue';
 
     .logo
       display: flex
-      
-      img
-        padding: 10px 20px
-
-    .main-nav
-      flex-grow: 1
-      user-select: none
-
-      ul
-        display: flex
-        list-style: none
-        justify-content: center
-        align-items: center
-        column-gap: 50px
-        text-align: center
-
-        li
-          text-align: center
-
-          a
-            color: common.$text-color
-            text-decoration: none
-            padding: 20px
-            text-align: center
-            display: flex
-            align-items: center
-            gap: 7px
-
-            border-bottom: 1px solid transparent
-
-            &:hover
-              border-bottom: 1px solid common.$text-color
-
-            img
-              max-height: 30px
-
-            span
-              height: fit-content
-
+      position: absolute
+      top: 50%
+      transform: translateY(-50%)
+      height: 50px
+      left: 1rem
 
 
   .main-container
     background-color: common.$bg-color
     width: 100%
     height: calc(100vh - common.$header-height)
-    min-height: 410px
+    //min-height: 410px
     display: flex
     align-items: center
     justify-content: center
     
   .footer
     display: none
+
+
 </style>
